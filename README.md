@@ -194,6 +194,6 @@ Contributions, issues, and feature requests are welcome!
 
 Nicholas Lee: nic.leejunyi@gmail.com
 
-Project Link: [https://github.com/github_username/repo_name](https://github.com/github_username/repo_name)
+Project Link: [https://github.com/nicleejy/NUS-Timetable-Reminders](https://github.com/nicleejy/NUS-Timetable-Reminders)
 
 <p align="right">(<a href="#top">back to top</a>)</p>

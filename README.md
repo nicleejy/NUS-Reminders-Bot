@@ -3,7 +3,7 @@
 # NUS Timetable Reminders Bot
 A simple and intuitive Telegram bot that allows students from the National University of Singapore to <b>save</b> their NUS timetable and <b>receive custom alerts</b> in advance before a class! 
 
- s
+
 ![Python](https://img.shields.io/badge/Python-3776AB?style=for-the-badge&logo=python&logoColor=white)
 ![Heroku](https://img.shields.io/badge/Heroku-430098?style=for-the-badge&logo=heroku&logoColor=white)
 ![MongoDB](https://img.shields.io/badge/MongoDB-white?style=for-the-badge&logo=mongodb&logoColor=4EA94B)

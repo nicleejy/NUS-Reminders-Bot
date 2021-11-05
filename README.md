@@ -150,6 +150,7 @@ Error handling was one of the more time consuming aspects of the project. Some e
 - Activates buttons that were previously generated
 - Skips between different process flows
 - Sends in an invalid URL or image
+
 There are multiple exception handlers present in the source code to prevent crashes if the user performs something unexpected.
 
 To catch invalid URLs, I used the <a href="https://pypi.org/project/validator/">Validator</a> package which checks to see if the URL is indeed from NUSMods and is a valid link, before the bot performs any other tasks on the URL. 

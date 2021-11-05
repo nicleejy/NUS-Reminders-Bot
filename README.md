@@ -80,7 +80,7 @@ Other useful features include:
 7. `/info` - Get information about a timetable from URL or image
 8. `/cancel` - Clear all running tasks
 9. `/classes` - Obtain a weekly overview of your timetable
-10.`/bugs` - To report issues
+10. `/bugs` - To report issues
 
 <p align="right">(<a href="#top">back to top</a>)</p>
 

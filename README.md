@@ -63,6 +63,7 @@ Other useful features include:
 </p><br/><br/>
 
 <p align="right">(<a href="#top">back to top</a>)</p>
+
 ## Obtain Module Details
 <p align="center">
 <img src="images/details.PNG" align="center" height=auto width="1200" >

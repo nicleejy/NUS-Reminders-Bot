@@ -1,12 +1,12 @@
 <div id="top"></div>
 
 # NUS Timetable Reminders Bot
-A Telegram bot that allows users to <b>save</b> their NUS timetable and <b>receive custom alerts</b> in advance before a class!
+A simple and intuitive Telegram bot that allows students from the National University of Singapore to <b>save</b> their NUS timetable and <b>receive custom alerts</b> in advance before a class! 
 
-
+ s
 ![Python](https://img.shields.io/badge/Python-3776AB?style=for-the-badge&logo=python&logoColor=white)
 ![Heroku](https://img.shields.io/badge/Heroku-430098?style=for-the-badge&logo=heroku&logoColor=white)
-![MongoFB](https://img.shields.io/badge/MongoDB-white?style=for-the-badge&logo=mongodb&logoColor=4EA94B)
+![MongoDB](https://img.shields.io/badge/MongoDB-white?style=for-the-badge&logo=mongodb&logoColor=4EA94B)
 ![Telegram](https://img.shields.io/badge/Telegram-2CA5E0?style=for-the-badge&logo=telegram&logoColor=white)
 
 
@@ -153,9 +153,6 @@ Error handling was one of the more time consuming aspects of the project. Some e
 There are multiple exception handlers present in the source code to prevent crashes if the user performs something unexpected.
 
 To catch invalid URLs, I used the <a href="https://pypi.org/project/validator/">Validator</a> package which checks to see if the URL is indeed from NUSMods and is a valid link, before the bot performs any other tasks on the URL. 
- 
-The bot is hosted on <a href="https://www.heroku.com/">Heroku</a>, a cloud application platform. 
-
 
 ### Privacy
 - Only the user's unique Telegram ID and timetable information are written to the database.
@@ -187,7 +184,7 @@ Distributed under the MIT License. See `LICENSE.txt` for more information.
 
 # Support
 Contributions, issues, and feature requests are welcome!
-- Give a ⭐️ if you like this project!
+- Give a ⭐️ if you like this project! 
 - Share https://telegram.me/nus_timetable_assist_bot on Telegram!
 
 

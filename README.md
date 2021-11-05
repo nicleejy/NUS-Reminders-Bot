@@ -44,28 +44,28 @@ Other useful features include:
 # Features
 
 <p align="center">
-<img src="images/add.PNG" align="center" height=auto width="1100" >
+<img src="images/add.PNG" align="center" height=auto width="1200" >
 </p><br/><br/>
 <p align="right">(<a href="#top">back to top</a>)</p>
 <p align="center">
-<img src="images/reminder.PNG" align="center" height=auto width="1100" >
+<img src="images/reminder.PNG" align="center" height=auto width="1200" >
 </p><br/><br/>
 
 <p align="right">(<a href="#top">back to top</a>)</p>
 <p align="center">
-<img src="images/info.PNG" align="center" height=auto width="1100" >
+<img src="images/info.PNG" align="center" height=auto width="1200" >
 </p><br/><br/>
 
 <p align="right">(<a href="#top">back to top</a>)</p>
 
 <p align="center">
-<img src="images/search.PNG" align="center" height=auto width="1100" >
+<img src="images/search.PNG" align="center" height=auto width="1200" >
 </p><br/><br/>
 
 <p align="right">(<a href="#top">back to top</a>)</p>
 ## Obtain Module Details
 <p align="center">
-<img src="images/details.PNG" align="center" height=auto width="1100" >
+<img src="images/details.PNG" align="center" height=auto width="1200" >
 </p><br/><br/>
 
 <p align="right">(<a href="#top">back to top</a>)</p>

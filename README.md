@@ -1,6 +1,6 @@
-<div id="top"></div>
 
-# NUS Timetable Reminders Bot
+# NUS Reminders Bot
+
 A simple and intuitive Telegram bot that allows students from the National University of Singapore to save their timetable and <b>receive custom alerts</b> in advance before a class! 
 
 
@@ -16,7 +16,7 @@ A simple and intuitive Telegram bot that allows students from the National Unive
     <img src="images/Logo.png" alt="Logo" width="300" height="300">
   </a>
 
-<h3 align="center">NUS Timetable Reminders</h3>
+<h3 align="center">NUS Timetable Reminders Bot</h3>
 
   <p align="center">
     <br />
@@ -108,9 +108,10 @@ This is my first ever programming project and there is alot that can be improved
 
 ### Project Details 
 
-The back-end was written in Python and served from Heroku, with the help of the implementation, <a href="https://github.com/eternnoir/pyTelegramBotAPI">pyTelegramBot API</a> from Eternnoir. Because of the nature of the reminders system, it was necessary for the bot to be persistent. A solution was to implement an external cloud database that communicates with the script directly. User timetables, when submitted, are stored in a <a href="https://www.mongodb.com/atlas/database">MongoDB Atlas</a> database along with a generated list of reminders from their respective classes. The post also retains user state, such as whether reminders are active and a job list of unique job IDs if there scheduled reminders are activated.
+The back-end was written in Python and served from Heroku, with the help of the implementation <a href="https://github.com/eternnoir/pyTelegramBotAPI">pyTelegramBot API</a>. Because of the nature of the reminders system, it was necessary for the bot to be persistent. A solution was to implement an external cloud database that communicates with the script directly. User timetables, when submitted, are stored in a <a href="https://www.mongodb.com/atlas/database">MongoDB Atlas</a> database along with a generated list of reminders from their respective classes. The post also retains user state, such as whether reminders are active and a job list of unique job IDs if there scheduled reminders are activated.
 
-To schedule jobs with custom clock processes, I had to use a package other than the built in Heroku Scheduler, which only schedules jobs at intervals. APScheduler was chosen because it is lightweight, easy to use, runs in the background via a separate thread, and able to integrate with the MongoDB Atlas database through a job store. Each job has a unique ID attributed to the user, along with a universally unique identifier (UUID) to ensure that each reminder can be traced for deletion if required.<br/><br/> 
+
+To schedule jobs with custom clock processes, I had to use a package other than the built in Heroku Scheduler, which only schedules jobs at intervals. APScheduler was chosen because it is lightweight, easy to use, runs in the background, and able to integrate with the MongoDB Atlas database through a job store. Each job has a unique ID attributed to the user, along with a universally unique identifier (UUID) to ensure that each reminder can be traced for deletion if required.<br/><br/> 
 
 ```python
 def schedule_jobs(job_list, userID, timing):
@@ -134,13 +135,15 @@ When timetables are saved, a list of reminders with a unique datetime object and
 ```python
 user_state[userID] = {"addTimetable": False, "getModuleInfo": "bug", "result": [], "setTime": False, "modData":[], "isoModule":"", "reminder": False} 
 ```
-<br/><br/>When the temporary process is complete, the entry for that particular user will be removed in order to reduce data storage. To ensure that the data is up to date, a Cron trigger is setup to repeat daily at 4.30am in order to refresh the current academic year and semester. In addition, it also parses the documents in the database to check if any timetables do not fall within the same category and removes them. The list of reminders is also being consistently updated so that the user receives the most recent timetable information.<br/><br/>
+<br/><br/>When the temporary process is complete, the entry for that particular user will be removed in order to reduce data storage. To ensure that the data is up to date, a Cron trigger is setup to repeat daily at 4.30am in order to refresh the current academic year and semester. In addition, it also parses the documents in the database to check if any timetables do not fall within the same category and removes them. The list of reminders is also being constantly updated so that the user receives the most recent timetable information.<br/><br/>
 ```python
 def updateReminderList(list_of_reminders):
-    now = datetime.datetime.now()
+    print("Current date/time in Singapore:")
+    print(get_sg_time())
     updated_reminders = []
     for data in list_of_reminders:
-        if now <= data[1]:
+        aware = sg_timezone.localize(data[1])
+        if get_sg_time() <= aware:
             updated_reminders.append(data)
     return updated_reminders
  ```
@@ -150,8 +153,7 @@ Error handling was one of the more time consuming aspects of the project. Some e
 - Activates buttons that were previously generated
 - Skips between different process flows
 - Sends in an invalid URL or image
-
-There are multiple exception handlers present in the source code to prevent crashes if the user performs something unexpected.
+- Attempts to remove a timetable while scheduling is in progress
 
 To catch invalid URLs, I used the <a href="https://pypi.org/project/validator/">Validator</a> package which checks to see if the URL is indeed from NUSMods and is a valid link, before the bot performs any other tasks on the URL. 
 
@@ -161,10 +163,13 @@ To catch invalid URLs, I used the <a href="https://pypi.org/project/validator/">
 - This bot does not collect other personally identifiable information from users
 - Please do not use this service to upload confidential information
 
+### Future Improvements
+1. Save a timetable via image or PDF
+2. Exam Countdown Feature
+
 ### Acknowledgements
-1. This app makes use of data from:
-- NUS Mods (https://api.nusmods.com/v2/)
-2. A big thank you to all my friends who kindly helped to test and report bugs for this bot!
+1. This app makes use of data from NUSMods (https://api.nusmods.com/v2/)
+3. A big thank you to all my friends who kindly helped to test and report bugs for this bot!
 
 
 

@@ -39,8 +39,7 @@ OCR_API_KEY = 'key'
 
 DATABASE_URL = os.environ.get("MONGODB_URI")
 
-cluster = MongoClient(DATABASE_URL) # establish connection with database
-
+cluster = MongoClient(DATABASE_URL)
 
 db = cluster["NUSTimetable"]
 collection = db["userInfo"]
@@ -1042,19 +1041,19 @@ def handle_image_sent(message):
             elif result == 'error':
                 bot.send_message(message.chat.id, '⚠️ Woops! Please send me a timetable from NUS Mods only.')
                 print('Wrong image file sent.')
-            elif len(result) == 0:
-                bot.send_message(message.chat.id, '⚠️ It seems you do not have any modules.')         
-            elif len(result) > 8:
-                bot.send_message(message.chat.id, '⚠️ Some modules may not be identified correctly. Showing only the first 8 modules.')
             else:
+                if len(result) == 0:
+                    bot.send_message(message.chat.id, '⚠️ It seems you do not have any modules.')         
+                elif len(result) > 8:
+                    bot.send_message(message.chat.id, '⚠️ Some modules may not be identified correctly. Showing only the first 8 modules.')
                 count1 = -1
                 for module in result:
                     count1 += 1
                     if len(module.split(' ')) > 6:
                         result[count1] = " ".join((module.split(' '))[0:4]) + '... ' + (module.split(' '))[-1] 
-            user_state[user]["result"] = result
-            bot.send_message(message.chat.id, "📚 Here are your modules for the semester. 📚\n\nSelect a module you'd like to know more about:", reply_markup=gen_markup(result))
-            user_state[user]["getModuleInfo"] = 2
+                user_state[user]["result"] = result
+                bot.send_message(message.chat.id, "📚 Here are your modules for the semester. 📚\n\nSelect a module you'd like to know more about:", reply_markup=gen_markup(result))
+                user_state[user]["getModuleInfo"] = 2
 
 #Initial callback handler for module options
 def ans_options(call):

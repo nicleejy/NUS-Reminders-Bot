@@ -1,6 +1,5 @@
 <div id="top"></div>
-<meta name="google-site-verification" content="qoP4lAeDyTOjrYoAE9kPEgVhShDUUZfzDOkozWla46U" />
-# NUS Timetable Reminders Bot
+# NUS Reminders Bot
 A simple and intuitive Telegram bot that allows students from the National University of Singapore to save their timetable and <b>receive custom alerts</b> in advance before a class! 
 
 
@@ -137,10 +136,12 @@ user_state[userID] = {"addTimetable": False, "getModuleInfo": "bug", "result": [
 <br/><br/>When the temporary process is complete, the entry for that particular user will be removed in order to reduce data storage. To ensure that the data is up to date, a Cron trigger is setup to repeat daily at 4.30am in order to refresh the current academic year and semester. In addition, it also parses the documents in the database to check if any timetables do not fall within the same category and removes them. The list of reminders is also being consistently updated so that the user receives the most recent timetable information.<br/><br/>
 ```python
 def updateReminderList(list_of_reminders):
-    now = datetime.datetime.now()
+    print("Current date/time in Singapore:")
+    print(get_sg_time())
     updated_reminders = []
     for data in list_of_reminders:
-        if now <= data[1]:
+        aware = sg_timezone.localize(data[1])
+        if get_sg_time() <= aware:
             updated_reminders.append(data)
     return updated_reminders
  ```
@@ -150,8 +151,9 @@ Error handling was one of the more time consuming aspects of the project. Some e
 - Activates buttons that were previously generated
 - Skips between different process flows
 - Sends in an invalid URL or image
+- Attempts to remove a timetable while scheduling is in progress
 
-There are multiple exception handlers present in the source code to prevent crashes if the user performs something unexpected.
+There are multiple exception handlers present in the source code to prevent crashes should the user performs something unexpected.
 
 To catch invalid URLs, I used the <a href="https://pypi.org/project/validator/">Validator</a> package which checks to see if the URL is indeed from NUSMods and is a valid link, before the bot performs any other tasks on the URL. 
 

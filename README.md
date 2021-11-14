@@ -16,7 +16,7 @@ A simple and intuitive Telegram bot that allows students from the National Unive
     <img src="images/Logo.png" alt="Logo" width="300" height="300">
   </a>
 
-<h3 align="center">NUS Timetable Reminders</h3>
+<h3 align="center">NUS Timetable Reminders Bot</h3>
 
   <p align="center">
     <br />

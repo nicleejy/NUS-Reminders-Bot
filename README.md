@@ -1,7 +1,7 @@
 <div id="top"></div>
 
 # NUS Timetable Reminders Bot
-A simple and intuitive Telegram bot that allows students from the National University of Singapore to <b>save</b> their NUS timetable and <b>receive custom alerts</b> in advance before a class! 
+A simple and intuitive Telegram bot that allows students from the National University of Singapore to save their timetable and <b>receive custom alerts</b> in advance before a class! 
 
 
 ![Python](https://img.shields.io/badge/Python-3776AB?style=for-the-badge&logo=python&logoColor=white)
@@ -13,7 +13,7 @@ A simple and intuitive Telegram bot that allows students from the National Unive
 <br />
 <div align="center">
   <a href="https://github.com/github_username/repo_name">
-    <img src="images/Logo.png" alt="Logo" width="200" height="200">
+    <img src="images/Logo.png" alt="Logo" width="300" height="300">
   </a>
 
 <h3 align="center">NUS Timetable Reminders</h3>
@@ -85,7 +85,7 @@ Other useful features include:
 
 <p align="right">(<a href="#top">back to top</a>)</p>
 
-# Technologies
+# Tech Stack
 
 * [Python](https://www.python.org/)
 * [MongoDB Atlas](https://www.mongodb.com/atlas/database)

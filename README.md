@@ -108,7 +108,7 @@ This is my first ever programming project and there is alot that can be improved
 
 ### Project Details 
 
-The back-end was written in Python and served from Heroku, with the help of the implementation <a href="https://github.com/eternnoir/pyTelegramBotAPI">pyTelegramBot API</a>. Because of the nature of the reminders system, it was necessary for the bot to be persistent. A solution was to implement an external cloud database that communicates with the script directly. User timetables, when submitted, are stored in a <a href="https://www.mongodb.com/atlas/database">MongoDB Atlas</a> database along with a generated list of reminders from their respective classes. The post also retains user state, such as whether reminders are active and a job list of unique job IDs if there scheduled reminders are activated.
+The back-end was written in Python and served from Heroku, with the help of the <a href="https://github.com/eternnoir/pyTelegramBotAPI">pyTelegramBot API</a> implementation. To deliver reminders to users, it was necessary for the bot persist user timetable information. A solution was to implement an external cloud database that the script can communicate with directly. User timetables, when submitted, are stored in a <a href="https://www.mongodb.com/atlas/database">MongoDB Atlas</a> database along with a generated list of reminders from their respective classes. The post also retains user state, such as whether reminders are active and a job list of unique job IDs if there scheduled reminders are activated.
 
 
 To schedule jobs with custom clock processes, I had to use a package other than the built in Heroku Scheduler, which only schedules jobs at intervals. APScheduler was chosen because it is lightweight, easy to use, runs in the background, and able to integrate with the MongoDB Atlas database through a job store. Each job has a unique ID attributed to the user, along with a universally unique identifier (UUID) to ensure that each reminder can be traced for deletion if required.<br/><br/> 
@@ -147,7 +147,7 @@ def updateReminderList(list_of_reminders):
             updated_reminders.append(data)
     return updated_reminders
  ```
- <br/><br/>The image search feature was a fun add-on that I decided to implement to give users the added convenience of looking up information from their timetables on to go. It makes use of <a href="https://ocr.space/ocrapi">OCRSpace API</a>, a free Optical Character Recognition API. Upon return of the parsed text, the bot will look for keywords and search through the NUSMods database and return the modules matching those keywords.
+ <br/><br/>The image search feature was a fun add-on that I decided to implement to give users the added convenience of looking up information from their timetables on the go. It makes use of <a href="https://ocr.space/ocrapi">OCRSpace API</a>, a free Optical Character Recognition API. Upon return of the parsed text, the bot will look for keywords and search through the NUSMods database and return the modules matching those keywords.
  
 Error handling was one of the more time consuming aspects of the project. Some examples are if the user:
 - Activates buttons that were previously generated
@@ -175,7 +175,7 @@ To catch invalid URLs, I used the <a href="https://pypi.org/project/validator/">
 
 # Contributing
 
-Contributions are what make the open source community such an amazing place to learn, inspire, and create. Any contributions you make are **greatly appreciated**.
+Contributions are what make the open source community such an amazing place to learn, inspire, and create. Any contributions you make are greatly appreciated!
 
 If you have a suggestion that would make this better, please fork the repo and create a pull request.
 

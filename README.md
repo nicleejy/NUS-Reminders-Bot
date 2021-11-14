@@ -1,5 +1,6 @@
-<div id="top"></div>
+
 # NUS Reminders Bot
+
 A simple and intuitive Telegram bot that allows students from the National University of Singapore to save their timetable and <b>receive custom alerts</b> in advance before a class! 
 
 

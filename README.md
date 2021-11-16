@@ -1,7 +1,7 @@
 
 # NUS Reminders Bot
 
-A simple and intuitive Telegram bot that allows students from NUS to save their timetable and receive custom alerts in before their classes.
+A simple and intuitive Telegram bot that allows students from NUS to save their timetable and receive custom alerts before their classes.
 
 
 ![Python](https://img.shields.io/badge/Python-3776AB?style=for-the-badge&logo=python&logoColor=white)

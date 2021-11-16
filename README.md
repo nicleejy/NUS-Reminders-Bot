@@ -87,12 +87,10 @@ Other useful features include:
 
 # Tech Stack
 
-* [Python](https://www.python.org/)
 * [MongoDB Atlas](https://www.mongodb.com/atlas/database)
 * [Heroku](https://www.heroku.com)
 * [APScheduler](https://pypi.org/project/APScheduler/2.1.2/)
 * [NUSMods API](https://api.nusmods.com/v2/)
-* [OCRSPace API](https://ocr.space/ocrapi)
 * [Telegram API](https://core.telegram.org/)
 * [pyTelegramBotAPI](https://github.com/eternnoir/pyTelegramBotAPI)
 

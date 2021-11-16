@@ -47,7 +47,6 @@ collection = db["userInfo"]
 bugdb = cluster["BugReports"]
 bug_report = bugdb["Reports"]
 
-
 schedules_database = db["apscheduler"]
 jobstore_mongo = schedules_database["jobs"]
 
@@ -62,6 +61,18 @@ executors = {
 
 global academic_year
 global sem_index
+
+class Error(Exception):
+    pass
+
+class SemesterNotFoundError(Error):
+    #semester index not present in database
+    pass
+
+class YearNotFoundError(Error):
+    #data for the year not present in database
+    pass
+
 
 scheduler = BackgroundScheduler(daemon=True, jobstores=jobstores, executors=executors, timezone="Asia/Taipei")
 
@@ -193,7 +204,11 @@ scheduler.add_job(configure_search, trigger='cron', hour='4', minute='30', jobst
 
 #get data from NUSMods
 def fetch_nusmods_data(ay):
-    module_names = requests.get("https://api.nusmods.com/v2/" + ay + "/moduleList.json")
+    try:
+        module_names = requests.get("https://api.nusmods.com/v2/" + ay + "/moduleList.json")
+    except Exception as e:
+        print(e)
+        return "data_not_found"
     database_of_module_names = module_names.json()
     return database_of_module_names
 
@@ -240,13 +255,6 @@ def cleanTimetableLink(link):
 #['MA2001', ['Lecture 2', 'Friday', '1200', '1400', [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13], 'E-Learn_B'], ['Tutorial 17', 'Wednesday', '1500', '1600', [3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13], 'E-Learn_B']]]
 
 
-class Error(Exception):
-    pass
-
-class SemesterNotFoundError(Error):
-    #semester index not present in database
-    pass
-
 #Extract data for each lesson in the timetable
 def extractData(dict_of_mods, link):
     modList = []
@@ -254,7 +262,11 @@ def extractData(dict_of_mods, link):
         semester_exists = False
         subList = []
         subList.append(key)
-        response = requests.get("https://api.nusmods.com/v2/" + academic_year + "/modules/" + key + ".json")
+        try:
+            response = requests.get("https://api.nusmods.com/v2/" + academic_year + "/modules/" + key + ".json")
+        except Exception as e:
+            print(e)
+            return "data_not_found"
         dataBase = response.json()
         sem = 0
         sem_data = dataBase["semesterData"]
@@ -322,13 +334,13 @@ def gen_overview(message):
                 bot.send_message(message.chat.id, "⚠️ You have not added a timetable yet!\nEnter /add to save your timetable.")
                 generate_week = False
         else:
-            mon = datetime.date.today() - timedelta(days=weekday_today())
-            tues = datetime.date.today() + timedelta(days =(1 - weekday_today()))
-            weds = datetime.date.today() + timedelta(days =(2 - weekday_today()))
-            thurs = datetime.date.today() + timedelta(days =(3 - weekday_today()))
-            fri = datetime.date.today() + timedelta(days=(4 - weekday_today()))
-            sat = datetime.date.today() + timedelta(days=(5 - weekday_today()))
-            sun = datetime.date.today() + timedelta(days=(6 - weekday_today()))
+            mon = datetime.datetime.now().astimezone(sg_timezone) - timedelta(days=datetime.datetime.now().astimezone(sg_timezone).weekday())
+            tues = datetime.datetime.now().astimezone(sg_timezone) + timedelta(days=(1 - datetime.datetime.now().astimezone(sg_timezone).weekday()))
+            weds = datetime.datetime.now().astimezone(sg_timezone) + timedelta(days=(2 - datetime.datetime.now().astimezone(sg_timezone).weekday()))
+            thurs = datetime.datetime.now().astimezone(sg_timezone) + timedelta(days=(3 - datetime.datetime.now().astimezone(sg_timezone).weekday()))
+            fri = datetime.datetime.now().astimezone(sg_timezone) + timedelta(days=(4 - datetime.datetime.now().astimezone(sg_timezone).weekday()))
+            sat = datetime.datetime.now().astimezone(sg_timezone) + timedelta(days=(5 - datetime.datetime.now().astimezone(sg_timezone).weekday()))
+            sun = datetime.datetime.now().astimezone(sg_timezone) + timedelta(days=(6 - datetime.datetime.now().astimezone(sg_timezone).weekday()))
             
             mon_data = []
             tues_data = []
@@ -405,22 +417,30 @@ def iterate_modules_for_image(arr):
     sifter = ['Total', 'Module']
     match_detected = []
     mod_names = fetch_nusmods_data(academic_year)
-    if sifter[0] and sifter[1] in arr:
-        for mod in mod_names:
-            if mod['moduleCode'] in arr:
-                match_detected.append(mod['title'].replace(',', '') + ' (' + mod['moduleCode'] + ')')
-        return match_detected
+    if mod_names == "data_not_found":
+        print("Information not available for the current academic year.")
+        raise YearNotFoundError
     else:
-        return 'error'
+        if sifter[0] and sifter[1] in arr:
+            for mod in mod_names:
+                if mod['moduleCode'] in arr:
+                    match_detected.append(mod['title'].replace(',', '') + ' (' + mod['moduleCode'] + ')')
+            return match_detected
+        else:
+            return 'error'
 
 #Parse data from URL string and search NUSMods for module name
 def iterate_modules_for_url(arr):
     match_detected = []
     mod_names = fetch_nusmods_data(academic_year)
-    for mod in mod_names:
-        if mod['moduleCode'] in arr:
-            match_detected.append(mod['title'].replace(',', '') + ' (' + mod['moduleCode'] + ')')
-    return match_detected
+    if mod_names == "data_not_found":
+        print("Information not available for the current academic year.")
+        raise YearNotFoundError
+    else:
+        for mod in mod_names:
+            if mod['moduleCode'] in arr:
+                match_detected.append(mod['title'].replace(',', '') + ' (' + mod['moduleCode'] + ')')
+        return match_detected
     
 #Checks if module is S/U-able
 def su_convert(bool):
@@ -502,11 +522,15 @@ def isolate_module_code_from_callback(response):
 def get_module_name(arr):
     found_name = []
     mod_names = fetch_nusmods_data(academic_year)
-    for mod in mod_names:
-        for module_code in arr:
-            if mod['moduleCode'] in module_code:
-                found_name.append(mod['title'] + ' (' + module_code + ')')
-    return found_name
+    if mod_names == "data_not_found":
+        print("Information not available for the current academic year.")
+        raise YearNotFoundError
+    else:
+        for mod in mod_names:
+            for module_code in arr:
+                if mod['moduleCode'] in module_code:
+                    found_name.append(mod['title'] + ' (' + module_code + ')')
+        return found_name
 
 
 def process_photo(msg):
@@ -954,33 +978,37 @@ def validate_and_save(message):
         try:
             user_state[userID]["isBusy"] = True
             output = extractData(cleanTimetableLink(message.text), message.text)
-            #output represents the raw timetable data
-            unsorted_reminders = generate_reminders(output, message.text, academic_year)
-            sorted_reminders = sorted(unsorted_reminders, key=lambda t: (t[1], t[2]))
+            if output == 'data_not_found':
+                bot.send_message(message.chat.id, "⚠️ Data currently unavailable.")
+                user_state[userID]["isBusy"] = False
+            else:
+                #output represents the raw timetable data
+                unsorted_reminders = generate_reminders(output, message.text, academic_year)
+                sorted_reminders = sorted(unsorted_reminders, key=lambda t: (t[1], t[2]))
 
-            module_names = {}
-            module_codes = []
-            for i in output:
-                module_codes.append(i[0])
-            names = get_module_name(module_codes)
-            for module in names:
-                code = str(isolate_module_code_from_callback(module))
-                module_names[code] = module
-        
-            user = message.chat.id
-            if collection.count_documents({"_id": user}) == 0:
-            #stores user ID, timetable and reminders to MongoDB (userTimetable, reminders)
-                user_reminders = updateReminderList(calibrate_reminder_start(sorted_reminders))
-                if len(user_reminders) == 0:
-                    bot.send_message(message.chat.id, "⚠️ You have no remaining classes, add a timetable for the next semester instead.\nEnter /cancel to exit.")
-                    user_state[userID]["isBusy"] = False
-                else:
-                    userInfo = {"_id": message.chat.id, "userTimetable": output, "reminders": user_reminders, "reminderOn":False, "list_of_jobs": None, "AY/Sem": [academic_year, sem_index], "module_names": module_names}
-                    collection.insert_one(userInfo)
-                    user_state[str(user)]["addTimetable"] = False
-                    user_state[userID]["isBusy"] = False
-                    print('Timetable information has been successfully added to the database.')
-                    bot.send_message(message.chat.id, "✅ Your timetable has been successfully added!")
+                module_names = {}
+                module_codes = []
+                for i in output:
+                    module_codes.append(i[0])
+                names = get_module_name(module_codes)
+                for module in names:
+                    code = str(isolate_module_code_from_callback(module))
+                    module_names[code] = module
+            
+                user = message.chat.id
+                if collection.count_documents({"_id": user}) == 0:
+                #stores user ID, timetable and reminders to MongoDB (userTimetable, reminders)
+                    user_reminders = updateReminderList(calibrate_reminder_start(sorted_reminders))
+                    if len(user_reminders) == 0:
+                        bot.send_message(message.chat.id, "⚠️ You have no remaining classes, add a timetable for the next semester instead.\nEnter /cancel to exit.")
+                        user_state[userID]["isBusy"] = False
+                    else:
+                        userInfo = {"_id": message.chat.id, "userTimetable": output, "reminders": user_reminders, "reminderOn":False, "list_of_jobs": None, "AY/Sem": [academic_year, sem_index], "module_names": module_names}
+                        collection.insert_one(userInfo)
+                        user_state[str(user)]["addTimetable"] = False
+                        user_state[userID]["isBusy"] = False
+                        print('Timetable information has been successfully added to the database.')
+                        bot.send_message(message.chat.id, "✅ Your timetable has been successfully added!")
         except SemesterNotFoundError:
             bot.send_message(message.chat.id, "⚠️ Some modules are not ongoing during the specified semester. Please double check your timetable.\nEnter /cancel to exit.")
             user_state[userID]["isBusy"] = False
@@ -1008,23 +1036,28 @@ def search_module(message):
     print('Handled by search function.')
     user_state[user]["isBusy"] = True
     make_uppercase = message.text.upper()
-    result = iterate_modules_for_url(make_uppercase.split())
-    if len(result) == 0:
-        bot.send_message(message.chat.id, "⚠️ No module found.")
+    try:
+        result = iterate_modules_for_url(make_uppercase.split())
+        if len(result) == 0:
+            bot.send_message(message.chat.id, "⚠️ No module found.")
+            user_state[user]["isBusy"] = False
+        else:
+            count1 = -1
+            for module in result:
+                count1 += 1
+                if len(module.split(' ')) > 6:
+                    result[count1] = " ".join((module.split(' '))[0:4]) + '... ' + (module.split(' '))[-1] 
+            print(result)
+            if len(result) > 8:
+                bot.send_message(message.chat.id, "⚠️ Too many modules! Showing only the first 8 modules.")
+            user_state[user]["result"] = result
+            bot.send_message(message.chat.id, "📕 Click on a module for more information:", reply_markup=gen_markup(result))
+            user_state[user]["getModuleInfo"] = "option"
+            user_state[user]["isBusy"] = False
+    except YearNotFoundError:
+        bot.send_message(message.chat.id, "⚠️ Data currently unavailable.")
         user_state[user]["isBusy"] = False
-    else:
-        count1 = -1
-        for module in result:
-            count1 += 1
-            if len(module.split(' ')) > 6:
-                result[count1] = " ".join((module.split(' '))[0:4]) + '... ' + (module.split(' '))[-1] 
-        print(result)
-        if len(result) > 8:
-            bot.send_message(message.chat.id, "⚠️ Too many modules! Showing only the first 8 modules.")
-        user_state[user]["result"] = result
-        bot.send_message(message.chat.id, "📕 Click on a module for more information:", reply_markup=gen_markup(result))
-        user_state[user]["getModuleInfo"] = "option"
-        user_state[user]["isBusy"] = False
+
 
 #Callback handler for URL info function
 def checkActiveURL(msg):
@@ -1045,23 +1078,30 @@ def handle_url_sent(message):
     if validators.url(message.text) and 'nusmods.com' in message.text:
         try:
             output = extractData(cleanTimetableLink(message.text), message.text)
-            for i in output:
-                result.append(i[0])
-            if user in user_state:
-                user_state[user]["semIndex"] = int(detectSem(message.text))
-            result = iterate_modules_for_url(result)
-            count3 = -1
-            for module in result: 
-                count3 += 1
-                if len(module.split(' ')) > 6:
-                    result[count3] = " ".join((module.split(' '))[0:4]) + '... ' + (module.split(' '))[-1] 
-
-            if len(result) > 8:
-                bot.send_message(message.chat.id, "⚠️ Too many modules! Showing only the first 8 modules.")
-            user_state[user]["result"] = result
-            bot.send_message(message.chat.id, "📚 Here are your modules for the semester. 📚\n\nSelect a module you'd like to know more about:", reply_markup=gen_markup(result))
-            user_state[user]["getModuleInfo"] = 2
-            user_state[user]["isBusy"] = False
+            if output == 'data_not_found':
+                bot.send_message(message.chat.id, "⚠️ Data currently unavailable.")
+                user_state[user]["isBusy"] = False
+            else:
+                for i in output:
+                    result.append(i[0])
+                if user in user_state:
+                    user_state[user]["semIndex"] = int(detectSem(message.text))
+                try:
+                    result = iterate_modules_for_url(result)
+                    count3 = -1
+                    for module in result: 
+                        count3 += 1
+                        if len(module.split(' ')) > 6:
+                            result[count3] = " ".join((module.split(' '))[0:4]) + '... ' + (module.split(' '))[-1] 
+                    if len(result) > 8:
+                        bot.send_message(message.chat.id, "⚠️ Too many modules! Showing only the first 8 modules.")
+                    user_state[user]["result"] = result
+                    bot.send_message(message.chat.id, "📚 Here are your modules for the semester. 📚\n\nSelect a module you'd like to know more about:", reply_markup=gen_markup(result))
+                    user_state[user]["getModuleInfo"] = 2
+                    user_state[user]["isBusy"] = False
+                except YearNotFoundError:
+                    bot.send_message(message.chat.id, "⚠️ Data currently unavailable.")
+                    user_state[user]["isBusy"] = False
         except SemesterNotFoundError:
             bot.send_message(message.chat.id, "⚠️ Some modules are not ongoing during the specified semester. Please send your NUSMods timetable link again.")
             user_state[user]["isBusy"] = False
@@ -1084,31 +1124,36 @@ def handle_image_sent(message):
             print('Handled by image info function.')
             user_state[user]["isBusy"] = True
             bot.send_message(message.chat.id, 'Processing... please wait!')
-            result = process_photo(message)
-            if result == False:
-                    bot.send_message(message.chat.id, '⚠️ A server error ocurred.\nPlease wait before sending me another photo.\nAlternatively, you may enter /cancel to exit.')
-                    print("API might be down, check API status.")
+            try:
+                result = process_photo(message)
+                if result == False:
+                        bot.send_message(message.chat.id, '⚠️ A server error ocurred.\nPlease wait before sending me another photo.\nAlternatively, you may enter /cancel to exit.')
+                        print("API might be down, check API status.")
+                        user_state[user]["isBusy"] = False
+                elif result == 'error':
+                    bot.send_message(message.chat.id, '⚠️ Woops! Please send me a timetable from NUSMods only.')
+                    print('Wrong image file sent.')
                     user_state[user]["isBusy"] = False
-            elif result == 'error':
-                bot.send_message(message.chat.id, '⚠️ Woops! Please send me a timetable from NUSMods only.')
-                print('Wrong image file sent.')
-                user_state[user]["isBusy"] = False
-            else:
-                if len(result) != 0:
-                    if len(result) > 8:
-                        bot.send_message(message.chat.id, '⚠️ Some modules may not be identified correctly. Showing only the first 8 modules.')
-                    count1 = -1
-                    for module in result:
-                        count1 += 1
-                        if len(module.split(' ')) > 6:
-                            result[count1] = " ".join((module.split(' '))[0:4]) + '... ' + (module.split(' '))[-1] 
-                    user_state[user]["result"] = result
-                    bot.send_message(message.chat.id, "📚 Here are your modules for the semester. 📚\n\nSelect a module you'd like to know more about:", reply_markup=gen_markup(result))
-                    user_state[user]["getModuleInfo"] = 2
-                    user_state[user]["isBusy"] = False 
                 else:
-                    bot.send_message(message.chat.id, '⚠️ It seems you do not have any modules.')
-                    user_state[user]["isBusy"] = False 
+                    if len(result) != 0:
+                        if len(result) > 8:
+                            bot.send_message(message.chat.id, '⚠️ Some modules may not be identified correctly. Showing only the first 8 modules.')
+                        count1 = -1
+                        for module in result:
+                            count1 += 1
+                            if len(module.split(' ')) > 6:
+                                result[count1] = " ".join((module.split(' '))[0:4]) + '... ' + (module.split(' '))[-1] 
+                        user_state[user]["result"] = result
+                        bot.send_message(message.chat.id, "📚 Here are your modules for the semester. 📚\n\nSelect a module you'd like to know more about:", reply_markup=gen_markup(result))
+                        user_state[user]["getModuleInfo"] = 2
+                        user_state[user]["isBusy"] = False 
+                    else:
+                        bot.send_message(message.chat.id, '⚠️ It seems you do not have any modules.')
+                        user_state[user]["isBusy"] = False
+            except YearNotFoundError:
+                bot.send_message(message.chat.id, "⚠️ Data currently unavailable.")
+                user_state[user]["isBusy"] = False
+
 
 #Initial callback handler for module options
 def ans_options(call):
@@ -1136,7 +1181,11 @@ def callback_query(call):
         if isolate_module_code_from_callback(choice) != False:
             isolate_module = isolate_module_code_from_callback(choice)
             user_state[user]["isoModule"] = isolate_module
-            moduleInfo = requests.get("https://api.nusmods.com/v2/" + academic_year + "/modules/" + isolate_module + ".json")
+            try:
+                moduleInfo = requests.get("https://api.nusmods.com/v2/" + academic_year + "/modules/" + isolate_module + ".json")
+            except Exception as e:
+                print(e)
+                bot.send_message(call.message.chat.id, "⚠️ Data currently unavailable.")
             moduleInfoData = moduleInfo.json()
             user_state[user]["modData"] = moduleInfoData
             bot.answer_callback_query(call.id)
@@ -1325,4 +1374,3 @@ def webhook():
 
 if __name__ == "__main__":
     server.run(host="0.0.0.0", port=int(os.environ.get('PORT', 5000)))
-

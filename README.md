@@ -80,8 +80,9 @@ Other useful features include:
 6. `/search` - Search for a module by module code (case-insensitive)
 7. `/info` - Get information about a timetable from URL or image
 8. `/cancel` - Clear all running tasks
-9. `/classes` - Obtain a weekly overview of your timetable
-10. `/bugs` - To report issues
+9. `/classes` - Obtain an overview of your timetable
+10. `/week` - Generate weekly overview
+11. `/bugs` - To report issues
 
 <p align="right">(<a href="#top">back to top</a>)</p>
 

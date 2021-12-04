@@ -1,7 +1,7 @@
 
 # NUS Reminders Bot
 
-A simple and intuitive Telegram bot that allows students from the National University of Singapore to save their timetable and <b>receive custom alerts</b> in advance before a class! 
+A simple and intuitive Telegram bot that allows students from NUS to save their timetable and receive custom alerts before their classes.
 
 
 ![Python](https://img.shields.io/badge/Python-3776AB?style=for-the-badge&logo=python&logoColor=white)
@@ -80,19 +80,18 @@ Other useful features include:
 6. `/search` - Search for a module by module code (case-insensitive)
 7. `/info` - Get information about a timetable from URL or image
 8. `/cancel` - Clear all running tasks
-9. `/classes` - Obtain a weekly overview of your timetable
-10. `/bugs` - To report issues
+9. `/classes` - Obtain an overview of your timetable
+10. `/week` - Generate weekly overview
+11. `/bugs` - To report issues
 
 <p align="right">(<a href="#top">back to top</a>)</p>
 
 # Tech Stack
 
-* [Python](https://www.python.org/)
 * [MongoDB Atlas](https://www.mongodb.com/atlas/database)
 * [Heroku](https://www.heroku.com)
 * [APScheduler](https://pypi.org/project/APScheduler/2.1.2/)
 * [NUSMods API](https://api.nusmods.com/v2/)
-* [OCRSPace API](https://ocr.space/ocrapi)
 * [Telegram API](https://core.telegram.org/)
 * [pyTelegramBotAPI](https://github.com/eternnoir/pyTelegramBotAPI)
 

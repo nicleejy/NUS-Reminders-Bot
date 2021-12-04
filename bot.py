@@ -984,7 +984,7 @@ def answer_set_time(call):
         attributes = reminder_timings[call.data]
         if call.data == "1440":
             timing = attributes[0]
-            msg = "You will be alerted " + attributes[1] +  " in advance."
+            msg = "I'll send you an alert " + attributes[1] +  " in advance :)"
             bot.send_message(user, "Processing... please wait!")
             schedule_jobs(ammend_timings(attributes[2], result["reminders"]), user, timing)
             user_state[str(user)]["isBusy"] = False

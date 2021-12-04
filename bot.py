@@ -47,6 +47,7 @@ collection = db["userInfo"]
 bugdb = cluster["BugReports"]
 bug_report = bugdb["Reports"]
 
+
 schedules_database = db["apscheduler"]
 jobstore_mongo = schedules_database["jobs"]
 
@@ -77,8 +78,7 @@ class YearNotFoundError(Error):
 scheduler = BackgroundScheduler(daemon=True, jobstores=jobstores, executors=executors, timezone="Asia/Taipei")
 
 option_button = ['About', 'Eligible Modules', 'Exam Info', 'Details', 'Go back']
-greetings = ['Good day!', 'Hello!', 'Hey there!', 'Hi there!', 'Greetings!', 'Hello there!', 'Hi!', 'Hey!']
-goodbye = ['See you soon!', 'Have a nice day :)', 'Have a great day!', 'See you later!', 'Goodbye for now!', 'See you later!', 'Bye!', 'Goodbye!']
+goodbye = ['See you soon!', 'Have a nice day :)', 'Have a great day!', 'See you later!', 'Goodbye for now!', 'See you later!', 'Goodbye!']
 
 #for debugging
 main_user_timetable = {}
@@ -87,8 +87,12 @@ main_user_timetable = {}
 user_state = {}
 
 #AY:[start of sem1, start of sem2]
-#Note that 2025 info has yet to be updated
-nus_academic_calendar = {'2021-2022' : [date(2021, 8, 2), date(2022, 1, 10)], '2022-2023' : [date(2022, 8, 1), date(2023, 1, 9)], '2023-2024' : [date(2023, 8, 7), date(2024, 1, 15)]}
+#Note that info for 2026 onwards has yet to be updated on the official NUS website
+nus_academic_calendar = {'2021-2022' : [date(2021, 8, 2), date(2022, 1, 10)], 
+                         '2022-2023' : [date(2022, 8, 1), date(2023, 1, 9)], 
+                         '2023-2024' : [date(2023, 8, 7), date(2024, 1, 15)], 
+                         '2024-2025' : [date(2024, 8, 5), date(2025, 1, 13)]}
+
 days_of_week = {'Monday' : 0, 'Tuesday' : 1, 'Wednesday' : 2, 'Thursday' : 3, 'Friday' : 4, 'Saturday' : 5, 'Sunday' : 6}
 
 
@@ -119,19 +123,20 @@ def isCompleted(user):
 #Construct reminders for lessons
 def make_reminder(job, userID, timing):
     if userID not in user_state:
-        user_state[str(userID)] = {"addTimetable": False, "getModuleInfo": 0, "result": [], "setTime": False, "modData":[], "isoModule":"", "reminder": True, "isBusy": False, "semIndex": 0}  
+        user_state[str(userID)] = {"addTimetable": False, 
+                                   "getModuleInfo": 0, 
+                                   "result": [], "setTime": False, 
+                                   "modData":[], "isoModule":"", 
+                                   "reminder": True, "isBusy": False, 
+                                   "semIndex": 0}  
     else:
         user_state[str(userID)]["reminder"] = True
     isCompleted(userID)
-    bot.send_message(userID, "📚 " + job[0] + " starts " + timing + " ✏️", reply_markup=gen_markup_reminder(job[0], convertTime(job[2]) + ' - ' + convertTime(job[3]), job[4]))
+    bot.send_message(userID, "📚 " + job[0] + " starts " + timing + " 📚", reply_markup=gen_markup_reminder(job[0], convertTime(job[2]) + ' - ' + convertTime(job[3]), job[4]))
 
 
 def get_sg_time():
     return datetime.datetime.now(sg_timezone)
-
-
-def weekday_today():
-    return datetime.datetime.today().weekday()
 
 #function to update the reminder list 
 def updateReminderList(list_of_reminders):
@@ -145,30 +150,32 @@ def updateReminderList(list_of_reminders):
     return updated_reminders
 
 
-def get_today():
-    return datetime.date.today()
-
-
 def configure_search():
 
     global academic_year
     global sem_index
 
-    if date(2021, 8, 2) <= get_today() < date(2022, 8, 1):
+    if date(2021, 8, 2) <= get_sg_time().date() < date(2022, 8, 1):
         ay = '2021-2022'
-        if get_today() >= date(2022, 1, 10):
+        if get_sg_time().date() >= date(2021, 12, 5):
             sem = 1
         else:
             sem = 0
-    elif date(2022, 8, 1) <= get_today() < date(2023, 8, 7):
+    elif date(2022, 8, 1) <= get_sg_time().date() < date(2023, 8, 7):
         ay = '2022-2023'
-        if get_today() >= date(2023, 1, 9):
+        if get_sg_time().date() >= date(2022, 12, 4):
             sem = 1
         else:
             sem = 0
-    elif date(2023, 8, 7) <= get_today() < date(2025, 8, 1):
+    elif date(2023, 8, 7) <= get_sg_time().date() < date(2024, 8, 5):
         ay = '2023-2024'
-        if get_today() >= date(2024, 1, 15):
+        if get_sg_time().date() >= date(2023, 12, 10):
+            sem = 1
+        else:
+            sem = 0
+    elif date(2024, 8, 5) <= get_sg_time().date() < date(2025, 8, 3):
+        ay = '2024-2025'
+        if get_sg_time().date() >= date(2024, 12, 8):
             sem = 1
         else:
             sem = 0
@@ -331,7 +338,7 @@ def gen_overview(message):
 
     if generate_week == True:
         if collection.count_documents({"_id": user}) == 0:
-                bot.send_message(message.chat.id, "⚠️ You have not added a timetable yet!\nEnter /add to save your timetable.")
+                bot.send_message(message.chat.id, "⚠️ You haven't added a timetable yet.\nEnter /add to save your timetable.")
                 generate_week = False
         else:
             mon = datetime.datetime.now().astimezone(sg_timezone) - timedelta(days=datetime.datetime.now().astimezone(sg_timezone).weekday())
@@ -355,20 +362,19 @@ def gen_overview(message):
             new_reminders = (collection.find_one({"_id": user}))["reminders"]
             print("Updating reminders of user " + str(user) + ".")
             for reminder in new_reminders:
-                print(reminder)
-                if reminder[1].date() == mon:
+                if reminder[1].date() == mon.date():
                     mon_data.append(reminder)
-                elif reminder[1].date() == tues:
+                elif reminder[1].date() == tues.date():
                     tues_data.append(reminder)
-                elif reminder[1].date() == weds:
+                elif reminder[1].date() == weds.date():
                     weds_data.append(reminder)
-                elif reminder[1].date() == thurs:
+                elif reminder[1].date() == thurs.date():
                     thurs_data.append(reminder)
-                elif reminder[1].date() == fri:
+                elif reminder[1].date() == fri.date():
                     fri_data.append(reminder)
-                elif reminder[1].date() == sat:
+                elif reminder[1].date() == sat.date():
                     sat_data.append(reminder)
-                elif reminder[1].date() == sun:
+                elif reminder[1].date() == sun.date():
                     sun_data.append(reminder)
 
             def iterator(data):
@@ -587,12 +593,11 @@ def gen_markup_reminder(module, time, venue):
     markup.add(InlineKeyboardButton(str(time), callback_data='seen2'), InlineKeyboardButton(str(venue), callback_data='seen3'))
     return markup
 
+
 #Generate user timetable 
-def gen_user_timetable(class_info, module_dict):
-    markup = InlineKeyboardMarkup()
-    markup.row_width = 3
+def gen_user_timetable(class_info, module_dict, userID):
     lesson_info = []
-    count = 0
+    count = 1
     for module in class_info:
         module_info = [module_dict[module[0]]]
         for lesson in module[1:]:
@@ -600,20 +605,19 @@ def gen_user_timetable(class_info, module_dict):
             end = convertTime(lesson[3])
             duration = "(" + str(start) + " to " + str(end) + ")"
             day_time = lesson[1] + " " + duration
-            lesson_type = "- " + lesson[0]
-            venue = "Venue: " + lesson[5]
+            lesson_type = lesson[0]
+            venue = lesson[5]
             module_info.append([lesson_type, venue, day_time])
         lesson_info.append(module_info)
-    
+    result = 'Here are your classes for the semester!\n\n'
     for mod in lesson_info:
+        module_container = "*" + str(count) + ". " + mod[0] + "*"
         count += 1
-        markup.add(InlineKeyboardButton(str(count) + ". " + mod[0], callback_data='none'))
         for classes in mod[1:]:
-            markup.add(InlineKeyboardButton(classes[0], callback_data='none'), 
-                       InlineKeyboardButton(classes[1], callback_data='none'))
-            markup.add(InlineKeyboardButton(classes[2], callback_data='none'))
-        markup.add(InlineKeyboardButton("___________________________________________", callback_data='none'))
-    return markup
+            format_lesson_info = "\n\n📚 *" + classes[0] + "*\n- " + classes[1] + "\n- " + classes[2]
+            module_container += format_lesson_info
+        result += module_container.replace("_", " ") + "\n\n\n"
+    bot.send_message(userID, result, parse_mode='Markdown')
 
 # Data returned by lesson_info
 # [['Programming Methodology II (CS2030S)', ['Thursday', '4:00pm to 6:00pm', 'Laboratory 16G', 'I3-0339'], 
@@ -639,13 +643,13 @@ def get_user_timetable(message):
 
     if generate_timetable == True:
         if collection.count_documents({"_id": user}) == 0:
-            bot.send_message(message.chat.id, "⚠️ You have not added a timetable yet.\nEnter /add to save your timetable.")
+            bot.send_message(message.chat.id, "⚠️ You haven't added a timetable yet.\nEnter /add to save your timetable.")
             generate_timetable = False
         else:
             userData = collection.find_one({"_id": user})
             timetable = userData["userTimetable"]
             module_dict = userData["module_names"]
-            bot.send_message(message.chat.id, "Your classes for the semester:", reply_markup=gen_user_timetable(timetable, module_dict))
+            gen_user_timetable(timetable, module_dict, user)
             generate_timetable = False
 
 
@@ -656,7 +660,15 @@ def activate_info(message):
     print(user_state)
     print("Handled by info module.")
     if user not in user_state:
-        user_state[user] = {"addTimetable": False, "getModuleInfo": 0, "result": [], "setTime": False, "modData":[], "isoModule":"", "reminder": False, "isBusy": False, "semIndex": 0}  
+        user_state[user] = {"addTimetable": False, 
+                            "getModuleInfo": 0, 
+                            "result": [], 
+                            "setTime": False, 
+                            "modData":[], 
+                            "isoModule":"", 
+                            "reminder": False, 
+                            "isBusy": False, 
+                            "semIndex": 0}  
     else:
         user_state[user]["modData"] = []
         user_state[user]["isoModule"] = ""
@@ -666,24 +678,22 @@ def activate_info(message):
     
     if user_state[user]["isBusy"] == False:
         user_state[user]["getModuleInfo"] = 1
-        bot.send_message(message.chat.id, "*Select one option:*\n\n1. Send me a clear photo of your NUSMods timetable\n\n2. URL to your NUSMods timetable", parse_mode='Markdown')
+        bot.send_message(message.chat.id, "Send me a clear *photo* or *URL* of your NUSMods timetable:", parse_mode='Markdown')
     else:
         bot.send_message(message.chat.id, "⚠️ Another job is in progress.")
 
 
 @bot.message_handler(commands=['start', 'menu'])
 def send_welcome(message):
-    bot.send_message(message.chat.id, "*" + greetings[randomNumber(greetings)] +" Welcome to NUS Timetable Assistant* 📆\n\nHere's what I can do:\n\n⏰ Create *personalised* class reminders!\
-    \n\n📷 Send in a photo/URL of your timetable for *module info*\n\n🔍 *Search* modules from NUSMods\n\n📚 Get a *weekly overview* of your classes\
-    \n\n\n1. /add to save a timetable.\
-    \n\n2. /activate to set reminders.\
-    \n\n3. /week to see obtain weekly overview.\
-    \n\n4. /classes to see your timetable.\
-    \n\n5. /info to retrieve info from your timetable.\
-    \n\n6. /search to enquire about any module.\
-    \n\n7. /cancel to end running tasks.\
-    \n\n8. /bugs to report issues\
-    \n\n9. /menu to bring up this menu!", parse_mode='Markdown')
+    bot.send_message(message.chat.id, "*Welcome to NUS Timetable Reminders!* 📆\
+    \n\n\n*To create your reminders:*\
+    \n\n1. */add* and send me your timetable URL 📎\
+    \n\n2. */activate* and select a timing ⏰\
+    \n\n3. Your reminders will be generated! ✅\
+    \n\n\n*Here's what else I can do:*\
+    \n\n📷  Send in a photo/URL of your timetable for *module info*\n\n🔍  *Search* modules from NUSMods\
+    \n\n📚  Get a *weekly overview* of your timetable\
+    \n\nClick on the */menu* button to explore more features!", parse_mode='Markdown')
 
 
 @bot.message_handler(commands=['cancel'])
@@ -711,7 +721,15 @@ def terminate_operation(message):
 def search(message):
     user = str(message.chat.id)
     if user not in user_state:
-        user_state[user] = {"addTimetable": False, "getModuleInfo": 0, "result": [], "setTime": False, "modData":[], "isoModule":"", "reminder": False, "isBusy": False, "semIndex": 0}  
+        user_state[user] = {"addTimetable": False, 
+                            "getModuleInfo": 0, 
+                            "result": [], 
+                            "setTime": False, 
+                            "modData":[], 
+                            "isoModule":"", 
+                            "reminder": False, 
+                            "isBusy": False, 
+                            "semIndex": 0}  
     else:
         user_state[user]["modData"] = []
         user_state[user]["isoModule"] = ""
@@ -719,10 +737,9 @@ def search(message):
         user_state[user]["setTime"] = False
         user_state[user]["semIndex"] = 0
 
-
     if user_state[user]["isBusy"] == False:    
         user_state[user]["getModuleInfo"] = "search"
-        bot.send_message(message.chat.id, "🔍 Please enter the module codes. Start each code on a new line:")
+        bot.send_message(message.chat.id, "🔍 Enter the module codes below. Start each code on a new line:")
     else:
         bot.send_message(message.chat.id, "⚠️ Another job is in progress.")
 
@@ -731,7 +748,15 @@ def search(message):
 def clearUserData(message):
     user = message.chat.id
     if str(user) not in user_state:
-        user_state[str(user)] = {"addTimetable": False, "getModuleInfo": 0, "result": [], "setTime": False, "modData":[], "isoModule":"", "reminder": False, "isBusy": False, "semIndex": 0}  
+        user_state[str(user)] = {"addTimetable": False, 
+                                 "getModuleInfo": 0, 
+                                 "result": [], 
+                                 "setTime": False, 
+                                 "modData":[], 
+                                 "isoModule":"", 
+                                 "reminder": False, 
+                                 "isBusy": False, 
+                                 "semIndex": 0}  
     else:
         user_state[str(user)]["getModuleInfo"] = 0
         user_state[str(user)]["modData"] = []
@@ -741,7 +766,7 @@ def clearUserData(message):
     if user_state[str(user)]["isBusy"] == False:
         user_state[str(user)]["isBusy"] = True
         if collection.count_documents({"_id": user}) == 0:
-            bot.send_message(message.chat.id, "⚠️ You have not added a timetable yet.\nEnter /add to save your timetable.")
+            bot.send_message(message.chat.id, "⚠️ You haven't added a timetable yet.\nEnter /add to save your timetable.")
             user_state[str(user)]["isBusy"] = False
         else:
             userData = collection.find_one({"_id": user})
@@ -759,7 +784,7 @@ def clearUserData(message):
             num_jobs = len(scheduler.get_jobs(jobstore="mongo"))
             user_state[str(user)]["isBusy"] = False
             print("Jobs and timetable have been cleared. There are " + str(num_jobs) + " remaining.")
-            bot.send_message(message.chat.id, "✅ Your timetable has been removed successfully.")
+            bot.send_message(message.chat.id, "✅ Your timetable has been successfully removed.")
     else:
         bot.send_message(message.chat.id, "⚠️ Job in progress, unable to remove timetable.")
 
@@ -768,7 +793,15 @@ def clearUserData(message):
 def processTimetable(message):
     user = str(message.chat.id)
     if user not in user_state:
-        user_state[user] = {"addTimetable": True, "getModuleInfo": 0, "result": [], "setTime": False, "modData":[], "isoModule":"", "reminder": False, "isBusy": False, "semIndex": 0}  
+        user_state[user] = {"addTimetable": True, 
+                            "getModuleInfo": 0, 
+                            "result": [], 
+                            "setTime": False, 
+                            "modData":[], 
+                            "isoModule":"", 
+                            "reminder": False, 
+                            "isBusy": False, 
+                            "semIndex": 0}  
     else:
         user_state[user]["addTimetable"] = True
         user_state[user]["getModuleInfo"] = 0
@@ -777,10 +810,10 @@ def processTimetable(message):
         
     if user_state[user]["isBusy"] == False:
         if collection.count_documents({"_id": int(user)}) != 0:
-            bot.send_message(message.chat.id, "⚠️ You already have a saved timetable.\nEnter /remove to remove your timetable.")
+            bot.send_message(message.chat.id, "⚠️ My records show you have a saved timetable.\nEnter /remove to delete your timetable.")
             user_state[user]["addTimetable"] = False
         else:
-            bot.send_message(message.chat.id, "📎 Please send your NUSMods Timetable Link here.")
+            bot.send_message(message.chat.id, "📎 Please send your NUSMods Timetable Link here!")
     else:
         user_state[user]["addTimetable"] = False
         bot.send_message(message.chat.id, "⚠️ Job in progress, unable to add timetable.")
@@ -792,16 +825,23 @@ def processTimetable(message):
 def stopReminders(message):
     user = message.chat.id 
     if str(user) not in user_state:
-        user_state[str(user)] = {"addTimetable": False, "getModuleInfo": 0, "result": [], "setTime": False, "modData":[], "isoModule":"", "reminder": False, "isBusy": False, "semIndex": 0}  
+        user_state[str(user)] = {"addTimetable": False, 
+                                 "getModuleInfo": 0, 
+                                 "result": [], 
+                                 "setTime": False, 
+                                 "modData":[], 
+                                 "isoModule":"", 
+                                 "reminder": False, 
+                                 "isBusy": False, 
+                                 "semIndex": 0}  
     else:
         user_state[str(user)]["getModuleInfo"] = 0
         user_state[str(user)]["semIndex"] = 0
 
-
     if user_state[str(user)]["isBusy"] == False:
         user_state[str(user)]["isBusy"] = True
         if collection.count_documents({"_id": user}) == 0:
-            bot.send_message(message.chat.id, "⚠️ You have not added a timetable yet.\nEnter /add to save your timetable.")
+            bot.send_message(message.chat.id, "⚠️ You haven't added a timetable yet.\nEnter /add to save your timetable.")
             user_state[str(user)]["isBusy"] = False
         else:
             userData = collection.find_one({"_id": user})
@@ -816,7 +856,7 @@ def stopReminders(message):
                         continue
                 collection.update_one({"_id": user}, {"$set":{"reminderOn": False}})
                 collection.update_one({"_id": user}, {"$set":{"list_of_jobs": None}})
-                bot.send_message(message.chat.id, "✅ All reminders have been deactivated!")
+                bot.send_message(message.chat.id, "✅ Your reminders have been deactivated!")
                 num_jobs = len(scheduler.get_jobs(jobstore="mongo"))
                 print("Jobs have been cleared. There are " + str(num_jobs) + " remaining.")
                 scheduler.print_jobs()
@@ -833,7 +873,15 @@ def stopReminders(message):
 def activateReminders(message):
     user = message.chat.id
     if str(user) not in user_state:
-        user_state[str(user)] = {"addTimetable": False, "getModuleInfo": 0, "result": [], "setTime": False, "modData":[], "isoModule":"", "reminder": False, "isBusy": False, "semIndex": 0}  
+        user_state[str(user)] = {"addTimetable": False, 
+                                 "getModuleInfo": 0, 
+                                 "result": [], 
+                                 "setTime": False, 
+                                 "modData":[], 
+                                 "isoModule":"", 
+                                 "reminder": False, 
+                                 "isBusy": False, 
+                                 "semIndex": 0}  
     else:
         user_state[str(user)]["setTime"] = False
         user_state[str(user)]["getModuleInfo"] = 0
@@ -841,16 +889,16 @@ def activateReminders(message):
 
     if user_state[str(user)]["isBusy"] == False:
         if collection.count_documents({"_id": user}) == 0:
-            bot.send_message(message.chat.id, "⚠️ You have not added a timetable yet.\nEnter /add to save your timetable.")
+            bot.send_message(message.chat.id, "⚠️ You haven't added a timetable yet.\nEnter /add to save your timetable.")
         else:
             result = collection.find_one({"_id": user})
             if result["reminderOn"] == True:
-                bot.send_message(message.chat.id, "⚠️ You already have active reminders.")
+                bot.send_message(message.chat.id, "⚠️ You have active reminders.")
             elif len(result["reminders"]) != 0:
                 bot.send_message(message.chat.id, "Select a timing below:", reply_markup=gen_time_options())
                 user_state[str(user)]["setTime"] = True
             else:
-                bot.send_message(message.chat.id, "⚠️ You do not have any upcoming classes.")
+                bot.send_message(message.chat.id, "⚠️ It seems you do not have any upcoming classes.\nTo save a new timetable, enter /remove to delete your old timetable, then enter /add.")
     else: 
         bot.send_message(message.chat.id, "⚠️ Job in progress, unable to activate reminders.")
 
@@ -858,10 +906,15 @@ def activateReminders(message):
 @bot.message_handler(commands=['bugs'])
 def reportBug(message):
     user = str(message.chat.id)
-    bot.send_message(message.chat.id, "Please provide details about the problems encountered:")
+    bot.send_message(message.chat.id, "Please provide details about the issues encountered:")
     bot.send_message(message.chat.id, "Enter /cancel to exit.")
     if user not in user_state:
-        user_state[user] = {"addTimetable": False, "getModuleInfo": "bug", "result": [], "setTime": False, "modData":[], "isoModule":"", "reminder": False, "isBusy": False, "semIndex": 0}  
+        user_state[user] = {"addTimetable": False, 
+                            "getModuleInfo": "bug", 
+                            "result": [], "setTime": False, 
+                            "modData":[], "isoModule":"", 
+                            "reminder": False, "isBusy": False, 
+                            "semIndex": 0}  
     else:
         user_state[user]["getModuleInfo"] = "bug"
         user_state[str(user)]["setTime"] = False
@@ -894,7 +947,12 @@ def save_bug_report(message):
         bot.send_message(message.chat.id, "Thank you for your feedback!")
 
 
-reminder_timings = {"10": ["10 minutes", 10], "30": ["30 minutes", 30], "60": ["1 hour", 60], "120": ["2 hours", 120], "180": ["3 hours", 180], "1440": ["tomorrow!", "1 day", 1440]}
+reminder_timings = {"10": ["10 minutes", 10], 
+                    "30": ["30 minutes", 30], 
+                    "60": ["1 hour", 60], 
+                    "120": ["2 hours", 120], 
+                    "180": ["3 hours", 180], 
+                    "1440": ["tomorrow!", "1 day", 1440]}
 
 #Callback handler for reminder setting
 def ans_time_set(call):
@@ -932,12 +990,14 @@ def answer_set_time(call):
             user_state[str(user)]["isBusy"] = False
         else:
             timing = "in " + attributes[0] + "!"
-            msg = "You will be alerted " + attributes[0] +  " in advance."
+            msg = "I'll send you an alert " + attributes[0] +  " in advance :)"
             bot.send_message(user, "Processing... please wait!")
             schedule_jobs(ammend_timings(attributes[1], result["reminders"]), user, timing)
             user_state[str(user)]["isBusy"] = False
-            #schedule_jobs(ammend_timings(attributes[1],  [['CS1231S Lecture 1', datetime.datetime(2021, 11, 14, 23, 5), '1500', '1600', 'E-Learn_C']]), user, timing)
-        bot.send_message(user, "✅ Your reminders have been created successfully!") 
+            #schedule_jobs(ammend_timings(attributes[1],  [['CS1231S Lecture 1', datetime.datetime(2021, 11, 26, 13, 0), '1500', '1600', 'E-Learn_C'],
+            #['Reminder Test', datetime.datetime(2021, 11, 25, 23, 43), '1500', '1600', 'E-Learn_C'], 
+            #['CS1231S Lecture 1', datetime.datetime(2021, 11, 27, 20, 30), '1500', '1600', 'E-Learn_C']]), user, timing)
+        bot.send_message(user, "✅ Your reminders have been created!") 
         collection.update_one({"_id": user}, {"$set":{"reminderOn": True}}) 
         scheduler.print_jobs() 
         bot.send_message(user, msg)
@@ -985,7 +1045,6 @@ def validate_and_save(message):
                 #output represents the raw timetable data
                 unsorted_reminders = generate_reminders(output, message.text, academic_year)
                 sorted_reminders = sorted(unsorted_reminders, key=lambda t: (t[1], t[2]))
-
                 module_names = {}
                 module_codes = []
                 for i in output:
@@ -1010,7 +1069,7 @@ def validate_and_save(message):
                         print('Timetable information has been successfully added to the database.')
                         bot.send_message(message.chat.id, "✅ Your timetable has been successfully added!")
         except SemesterNotFoundError:
-            bot.send_message(message.chat.id, "⚠️ Some modules are not ongoing during the specified semester. Please double check your timetable.\nEnter /cancel to exit.")
+            bot.send_message(message.chat.id, "⚠️ I've detected some modules which are not ongoing during the specified semester. Please send your NUSMods timetable link again.\nEnter /cancel to exit.")
             user_state[userID]["isBusy"] = False
         except Exception as e:
             print(e)
@@ -1096,14 +1155,14 @@ def handle_url_sent(message):
                     if len(result) > 8:
                         bot.send_message(message.chat.id, "⚠️ Too many modules! Showing only the first 8 modules.")
                     user_state[user]["result"] = result
-                    bot.send_message(message.chat.id, "📚 Here are your modules for the semester. 📚\n\nSelect a module you'd like to know more about:", reply_markup=gen_markup(result))
+                    bot.send_message(message.chat.id, "📚 Here are your modules for the semester! 📚\n\nSelect a module you'd like to know more about:", reply_markup=gen_markup(result))
                     user_state[user]["getModuleInfo"] = 2
                     user_state[user]["isBusy"] = False
                 except YearNotFoundError:
                     bot.send_message(message.chat.id, "⚠️ Data currently unavailable.")
                     user_state[user]["isBusy"] = False
         except SemesterNotFoundError:
-            bot.send_message(message.chat.id, "⚠️ Some modules are not ongoing during the specified semester. Please send your NUSMods timetable link again.")
+            bot.send_message(message.chat.id, "⚠️ I've detected some modules which are not ongoing during the specified semester. Please send your NUSMods timetable link again.\nEnter /cancel to exit.")
             user_state[user]["isBusy"] = False
         except Exception as e:
             print(e)
@@ -1144,7 +1203,7 @@ def handle_image_sent(message):
                             if len(module.split(' ')) > 6:
                                 result[count1] = " ".join((module.split(' '))[0:4]) + '... ' + (module.split(' '))[-1] 
                         user_state[user]["result"] = result
-                        bot.send_message(message.chat.id, "📚 Here are your modules for the semester. 📚\n\nSelect a module you'd like to know more about:", reply_markup=gen_markup(result))
+                        bot.send_message(message.chat.id, "📚 Here are your modules for the semester! 📚\n\nSelect a module you'd like to know more about:", reply_markup=gen_markup(result))
                         user_state[user]["getModuleInfo"] = 2
                         user_state[user]["isBusy"] = False 
                     else:
@@ -1237,7 +1296,8 @@ def genModuleDetails(call):
                 semester_exists = True
                 break
             sem += 1
-        
+
+
         if call.data == 'About':
             if moduleInfoData["description"] == '':
                 bot.send_message(call.message.chat.id, "There is no description for this module.")

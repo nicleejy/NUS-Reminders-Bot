@@ -32,7 +32,7 @@ A simple and intuitive Telegram bot that allows students from NUS to save their 
 Having trouble remembering when your next lesson begins? In addition to automatically creating personalised reminders for each user based on their timetables, this bot also serves as a proxy to NUS Mods by parsing https://nusmods.com/ and getting real time module information from its database.<br/><br/>
 
 <p align="center">
-<img src="photos/Cover.png" align="center" height=auto width="800" >
+<img src="photos/Cover.png" align="center" height=auto width="700" >
 </p><br/><br/>
 
 Other useful features include:
@@ -44,33 +44,37 @@ Other useful features include:
 # Features
 
 <p align="center">
-<img src="photos/add.PNG" align="center" height="682" width="614" >
+<img src="photos/add.PNG" align="center" height=auto width="800" >
 </p><br/><br/>
 <p align="right">(<a href="#top">back to top</a>)</p>
 <p align="center">
-<img src="photos/set_reminders.PNG" align="center" height="682" width="614" >
+<img src="photos/set_reminders.PNG" align="center" height=auto width="800" >
 </p><br/><br/>
 
 ## Image Search
 <p align="right">(<a href="#top">back to top</a>)</p>
 <p align="center">
-<img src="photos/image_info.PNG" align="center" height="682" width="614" >
+<img src="photos/info.PNG" align="center" height=auto width="800" >
 </p><br/><br/>
 
 ## Module Code Search
 <p align="right">(<a href="#top">back to top</a>)</p>
 <p align="center">
-<img src="photos/search.PNG" align="center" height="682" width="614" >
+<img src="photos/search.png" align="center" height=auto width="800" >
 </p><br/><br/>
 
 <p align="right">(<a href="#top">back to top</a>)</p>
 
 ## Obtain Key Module Info
 
-<p float="left">
-  <p align="middle">
-  <img src="photos/details_1.PNG" width="480" />
-  <img src="photos/details_2.PNG" width="480" /> 
+<p align="right">(<a href="#top">back to top</a>)</p>
+<p align="center">
+<img src="photos/details_1.PNG" align="center" height=auto width="800" >
+</p><br/><br/>
+
+<p align="right">(<a href="#top">back to top</a>)</p>
+<p align="center">
+<img src="photos/details_2.PNG" align="center" height=auto width="800" >
 </p><br/><br/>
 
 <p align="right">(<a href="#top">back to top</a>)</p>
@@ -100,16 +104,16 @@ Other useful features include:
 
 <p align="right">(<a href="#top">back to top</a>)</p>
 
-## Motivation 
+# Motivation 
 The idea for this bot came about because I noticed there was no platform available to compare modules quickly and effectively, and obtaining module information from a Telegram Bot seemed like a better alternative to browsing webpages. Moreover, instead of having to save class dates and timings manually into a calendar, I thought it would be more convenient to let a bot handle the creation of reminders and sending of alerts.
 
 This is my first ever programming project and there is alot that can be improved on in terms of code design and user process flow. Suggestions for improvement are welcome!
 
-## Try the Bot
+# Try the Bot
 
 https://telegram.me/nus_timetable_assist_bot
 
-## Requirements
+# Requirements
 To install the main package for the Telegram Bot API:
 
 ```$ pip install pyTelegramBotAPI```

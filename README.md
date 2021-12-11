@@ -32,7 +32,7 @@ A simple and intuitive Telegram bot that allows students from NUS to save their 
 Having trouble remembering when your next lesson begins? In addition to automatically creating personalised reminders for each user based on their timetables, this bot also serves as a proxy to NUS Mods by parsing https://nusmods.com/ and getting real time module information from its database.<br/><br/>
 
 <p align="center">
-<img src="photos/Cover.png" align="center" height=auto width="700" >
+<img src="photos/Cover.png" align="center" height=auto width="600" >
 </p><br/><br/>
 
 Other useful features include:

@@ -94,7 +94,7 @@ Other useful features include:
 
 <p align="right">(<a href="#top">back to top</a>)</p>
 
-# Tech Stack
+# Technologies
 
 * [MongoDB Atlas](https://www.mongodb.com/atlas/database)
 * [Heroku](https://www.heroku.com)

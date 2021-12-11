@@ -13,7 +13,7 @@ A simple and intuitive Telegram bot that allows students from NUS to save their 
 <br />
 <div align="center">
   <a href="https://github.com/github_username/repo_name">
-    <img src="images/Logo.png" alt="Logo" width="300" height="300">
+    <img src="logo/Logo.png" alt="Logo" width="300" height="300">
   </a>
 
 <h3 align="center">NUS Timetable Reminders Bot</h3>
@@ -32,7 +32,7 @@ A simple and intuitive Telegram bot that allows students from NUS to save their 
 Having trouble remembering when your next lesson begins? In addition to automatically creating personalised reminders for each user based on their timetables, this bot also serves as a proxy to NUS Mods by parsing https://nusmods.com/ and getting real time module information from its database.<br/><br/>
 
 <p align="center">
-<img src="images/cover.png" align="center" height=auto width="800" >
+<img src="photos/Cover.png" align="center" height=auto width="800" >
 </p><br/><br/>
 
 Other useful features include:
@@ -44,34 +44,38 @@ Other useful features include:
 # Features
 
 <p align="center">
-<img src="images/add.PNG" align="center" height=auto width="1200" >
+<img src="photos/add.PNG" align="center" height="682" width="614" >
 </p><br/><br/>
 <p align="right">(<a href="#top">back to top</a>)</p>
 <p align="center">
-<img src="images/reminder.PNG" align="center" height=auto width="1200" >
+<img src="photos/set_reminders.PNG" align="center" height="682" width="614" >
 </p><br/><br/>
 
+## Image Search
 <p align="right">(<a href="#top">back to top</a>)</p>
 <p align="center">
-<img src="images/info.PNG" align="center" height=auto width="1200" >
+<img src="photos/image_info.PNG" align="center" height="682" width="614" >
 </p><br/><br/>
 
+## Module Code Search
 <p align="right">(<a href="#top">back to top</a>)</p>
-
 <p align="center">
-<img src="images/search.PNG" align="center" height=auto width="1200" >
+<img src="photos/search.PNG" align="center" height="682" width="614" >
 </p><br/><br/>
 
 <p align="right">(<a href="#top">back to top</a>)</p>
 
-## Obtain Module Details
-<p align="center">
-<img src="images/details.PNG" align="center" height=auto width="1200" >
+## Obtain Key Module Info
+
+<p float="left">
+  <p align="middle">
+  <img src="photos/details_1.PNG" width="480" />
+  <img src="photos/details_2.PNG" width="480" /> 
 </p><br/><br/>
 
 <p align="right">(<a href="#top">back to top</a>)</p>
 
-## Commands
+# Commands
 1. `/menu` - Bring up main menu
 2. `/add` - Save a timetable
 3. `/activate` - Turn on alerts, set reminders timings
@@ -92,36 +96,42 @@ Other useful features include:
 * [Heroku](https://www.heroku.com)
 * [APScheduler](https://pypi.org/project/APScheduler/2.1.2/)
 * [NUSMods API](https://api.nusmods.com/v2/)
-* [Telegram API](https://core.telegram.org/)
 * [pyTelegramBotAPI](https://github.com/eternnoir/pyTelegramBotAPI)
 
 <p align="right">(<a href="#top">back to top</a>)</p>
 
-
-### Motivation 
-As a confused Year 1 student in NUS, during the module registration phase, I faced difficulties trying to come up with a suitable timetable. Despite there being many fantastic available online resources for timetable planning, I still found myself having numerous tabs open to compare module information, sometimes having to search for the same module more than once if the tabs were accidentally closed.
-
+## Motivation 
 The idea for this bot came about because I noticed there was no platform available to compare modules quickly and effectively, and obtaining module information from a Telegram Bot seemed like a better alternative to browsing webpages. Moreover, instead of having to save class dates and timings manually into a calendar, I thought it would be more convenient to let a bot handle the creation of reminders and sending of alerts.
 
 This is my first ever programming project and there is alot that can be improved on in terms of code design and user process flow. Suggestions for improvement are welcome!
 
-### Project Details 
+## Try the Bot
+
+https://telegram.me/nus_timetable_assist_bot
+
+## Requirements
+To install the main package for the Telegram Bot API:
+
+```$ pip install pyTelegramBotAPI```
+
+* Installation from source (requires git):
+
+```
+$ git clone https://github.com/eternnoir/pyTelegramBotAPI.git
+$ cd pyTelegramBotAPI
+$ python setup.py install
+```
+
+Install other packages and drivers (APScheduler, Pymongo):
+
+```$ pip install -r requirements.txt```
+
+## Project Details 
 
 The back-end was written in Python and served from Heroku, with the help of the <a href="https://github.com/eternnoir/pyTelegramBotAPI">pyTelegramBot API</a> implementation. To deliver reminders to users, it was necessary for the bot persist user timetable information. A solution was to implement an external cloud database that the script can communicate with directly. User timetables, when submitted, are stored in a <a href="https://www.mongodb.com/atlas/database">MongoDB Atlas</a> database along with a generated list of reminders from their respective classes. The post also retains user state, such as whether reminders are active and a job list of unique job IDs if there scheduled reminders are activated.
 
-
-To schedule jobs with custom clock processes, I had to use a package other than the built in Heroku Scheduler, which only schedules jobs at intervals. APScheduler was chosen because it is lightweight, easy to use, runs in the background, and able to integrate with the MongoDB Atlas database through a job store. Each job has a unique ID attributed to the user, along with a universally unique identifier (UUID) to ensure that each reminder can be traced for deletion if required.<br/><br/> 
-
-```python
-def schedule_jobs(job_list, userID, timing):
-    list_of_job = []
-    for job in job_list:
-        uniqueID = "user-" + str(userID) + "-" + str(uuid.uuid4())
-        list_of_job.append(uniqueID)
-        scheduler.add_job(make_reminder, 'date', run_date=job[1], args=[job, userID, timing], jobstore="mongo", replace_existing=True, id=uniqueID)
-    collection.update_one({"_id": userID}, {"$set":{"list_of_jobs": list_of_job}})
-```
-<br/><br/> 
+To schedule jobs with custom clock processes, I had to use a package other than the built in Heroku Scheduler, which only schedules jobs at intervals. APScheduler was chosen because it is lightweight, easy to use, runs in the background, and able to integrate with the MongoDB Atlas database through a job store. Each job has a unique ID attributed to the user, along with a universally unique identifier (UUID) to ensure that each reminder can be traced for deletion if required.
+ 
 When timetables are saved, a list of reminders with a unique datetime object and other required information is generated. This provides the data to the scheduler, enabling it to display the correct module information at the right time. The reminders are generated on a weekly basis following the specified weeks of each module found in the NUSMods database.<br/><br/> 
 ```python
  {"weeks": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13]}
@@ -129,16 +139,17 @@ When timetables are saved, a list of reminders with a unique datetime object and
  
  {"weeks": [2, 4, 6, 8, 10, 12]}
  #Generates a reminder list of alternate weeks, also taking into account recess week
+ 
+ #Modules with a date range are not yet supported
 ```
 <br/><br/> The bot has multiple callback handlers and process flows, which made it crucial to maintain a local user state. For example, the addition of a timetable `/add` is a 2 step process while searching for module information `/info` is a 3 step processes. Each step has to listen for a specific input from the user (URLs, Images, Text, Button presses) and respond accordingly. In order to prevent conflict, I used a local nested dictionary which maintains the state of each user. Each entry has a key which represents the unique Telegram ID of the user as shown:<br/><br/>
 ```python
 user_state[userID] = {"addTimetable": False, "getModuleInfo": "bug", "result": [], "setTime": False, "modData":[], "isoModule":"", "reminder": False} 
 ```
 <br/><br/>When the temporary process is complete, the entry for that particular user will be removed in order to reduce data storage. To ensure that the data is up to date, a Cron trigger is setup to repeat daily at 4.30am in order to refresh the current academic year and semester. In addition, it also parses the documents in the database to check if any timetables do not fall within the same category and removes them. The list of reminders is also being constantly updated so that the user receives the most recent timetable information.<br/><br/>
+
 ```python
 def updateReminderList(list_of_reminders):
-    print("Current date/time in Singapore:")
-    print(get_sg_time())
     updated_reminders = []
     for data in list_of_reminders:
         aware = sg_timezone.localize(data[1])
@@ -156,25 +167,23 @@ Error handling was one of the more time consuming aspects of the project. Some e
 
 To catch invalid URLs, I used the <a href="https://pypi.org/project/validator/">Validator</a> package which checks to see if the URL is indeed from NUSMods and is a valid link, before the bot performs any other tasks on the URL. 
 
-### Privacy
+## Privacy
 - Only the user's unique Telegram ID and timetable information are written to the database.
 - Stored timetables can be removed by using the `/remove` command
 - This bot does not collect other personally identifiable information from users
 - Please do not use this service to upload confidential information
 
-### Future Improvements
+## Future Improvements
 1. Save a timetable via image or PDF
 2. Exam Countdown Feature
 
-### Acknowledgements
+## Acknowledgements
 1. This app makes use of data from NUSMods (https://api.nusmods.com/v2/)
-3. A big thank you to all my friends who kindly helped to test and report bugs for this bot!
-
-
+3. A big thank you to my friends who kindly helped to test and report bugs for this bot :)
 
 # Contributing
 
-Contributions are what make the open source community such an amazing place to learn, inspire, and create. Any contributions you make are greatly appreciated!
+Any contributions you make are greatly appreciated!
 
 If you have a suggestion that would make this better, please fork the repo and create a pull request.
 

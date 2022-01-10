@@ -477,8 +477,13 @@ def generate_reminders(arr, link, this_AY):
             try:
                 if session[4][0] == 7:
                     initial = 7 + session[4][0] * 7
-                else:     
-                    initial = session[4][0] * 7
+                else:
+                    if sem_index == 0:
+                        initial = session[4][0] * 7
+                        print(f"Initial start for semester 1: {initial}")
+                    elif sem_index == 1:
+                        initial = (session[4][0] - 1) * 7 
+                        print(f"Initial start for semester 2: {initial}")
                 add_days = 0
                 gather_data = [moduleName + ' ' + session[0], nus_academic_calendar[this_AY][int(detectSem(link)) - 1] + timedelta(days = initial + days_of_week[session[1]]), session[2], session[3], session[5]]
                 lesson_reminder.append(gather_data)

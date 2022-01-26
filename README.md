@@ -105,9 +105,9 @@ Other useful features include:
 <p align="right">(<a href="#top">back to top</a>)</p>
 
 # Motivation 
-The idea for this bot came about because I noticed there was no platform available to compare modules quickly and effectively, and obtaining module information from a Telegram Bot seemed like a better alternative to browsing webpages. Moreover, instead of having to save class dates and timings manually into a calendar, I thought it would be more convenient to let a bot handle the creation of reminders and sending of alerts.
+I noticed there was no platform available to compare modules quickly and effectively, and obtaining module information from a bot seemed to be a better alternative to browsing webpages. At the start of a new semester, I often forget the timings of my upcoming classes. Moreover, since many of us use Telegram on a daily basis, a Telegram bot is a more unobtrusive way to receive class notifications and quickly obtain class information.
 
-This is my first ever programming project and there is alot that can be improved on in terms of code design and user process flow. Suggestions for improvement are welcome!
+This is my first programming project and there is plenty that can be improved on in terms of code design and process flow. Suggestions for improvement are welcome :)
 
 # Try the Bot
 
@@ -132,7 +132,7 @@ Install other packages and drivers (APScheduler, Pymongo):
 
 ## Project Details 
 
-The back-end was written in Python and served from Heroku, with the help of the <a href="https://github.com/eternnoir/pyTelegramBotAPI">pyTelegramBot API</a> implementation. To deliver reminders to users, it was necessary for the bot persist user timetable information. A solution was to implement an external cloud database that the script can communicate with directly. User timetables, when submitted, are stored in a <a href="https://www.mongodb.com/atlas/database">MongoDB Atlas</a> database along with a generated list of reminders from their respective classes. The post also retains user state, such as whether reminders are active and a job list of unique job IDs if there scheduled reminders are activated.
+The back-end was written in Python and served from Heroku, with the help of the <a href="https://github.com/eternnoir/pyTelegramBotAPI">pyTelegramBot API</a> implementation. To deliver reminders to users, it was necessary for the bot persist user timetable information. A solution was to implement an external cloud database that the script can communicate with directly. User timetables, when submitted, are stored in a <a href="https://www.mongodb.com/atlas/database">MongoDB Atlas</a> database along with a generated list of reminders from their respective classes. The document in the database also retains user state, such as whether reminders are active and a job list of unique job IDs if there scheduled reminders are activated.
 
 To schedule jobs with custom clock processes, I had to use a package other than the built in Heroku Scheduler, which only schedules jobs at intervals. APScheduler was chosen because it is lightweight, easy to use, runs in the background, and able to integrate with the MongoDB Atlas database through a job store. Each job has a unique ID attributed to the user, along with a universally unique identifier (UUID) to ensure that each reminder can be traced for deletion if required.
  

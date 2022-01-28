@@ -116,13 +116,13 @@ days_of_week = {'Monday' : 0, 'Tuesday' : 1, 'Wednesday' : 2, 'Thursday' : 3, 'F
 
 
 help_message = "*Help Menu*\n\n1. *How to add my timetable? 📚*\n\nUse the /add command and send in the link to your timetable from NUSMods.\
-    \n\nUpon successfully saving your timetable, you will be able to use the rest of the features.\n\n\n2. *How to obtain weekly overview? 📆*\n\nUse the /week command to get a summary of your classes for the current week.\
+    \n\nUpon successfully saving your timetable, you will be able to use the rest of the features.\n\n\n2. *How to obtain weekly overview? 📆*\n\nUse the *📆 Weekly Overview* button to get a summary of your classes for the current week.\
     \n\nOnly upcoming classes are reflected in the weekly summary.\n\n\n3. *How do I set my reminders? ⏰*\n\nWith the /activate command, you can set how early in advance you want to be notified.\nIf you do not wish to receive reminders, use the /deactivate command.\
-    \n\n\n4. *Where can I view my timetable? 🧾*\n\nAfter adding your timetable, you will be able to view class information such as venues and lesson times by using the /classes command.\
-    \n\n\n5. *How to retrieve module information? ℹ️*\n\nYou may use the following commands to obtain information about specific modules.\n\n*/search*\
+    \n\n\n4. *Where can I view my timetable? 🧾*\n\nAfter adding your timetable, you will be able to view class information such as venues and lesson times by using the *📚 My Classes* button.\
+    \n\n\n5. *How to retrieve module information? ℹ️*\n\nYou may use the following commands to obtain information about specific modules.\n\n*🔍 Search*\
     \nUse this command and enter module codes on a new line.\
-    \n\n*/info*\nUse this to retrieve module information using either an image or a link to your NUSMods timetable.\
-    \n\n\n6. *How to use image recognition feature? 📸*\n\nUse /info and send in a PNG/JPG file of your timetable from NUSMods to retrieve data for all your modules.\n\nAlternatively, you may also send in a link to your timetable.\
+    \n\n*📷 Info*\nUse this to retrieve module information using either an image or a link to your NUSMods timetable.\
+    \n\n\n6. *How to use image recognition feature? 📸*\n\nUse *📷 Info* and send in a PNG/JPG file of your timetable from NUSMods to retrieve data for all your modules.\n\nAlternatively, you may also send in a link to your timetable.\
     \n\n\n7. *How do I delete my timetable? 🗑*\n\nUse the /remove command to delete all saved timetable information. This feature also automatically deactivates any active reminders.\
     \n\n\n8. *Where do I report bugs? 🐞*\n\nShould you encounter any bugs while using the bot, please enter /bugs and report the issue in the next message.\
     \n\n\nThank you for using NUS Timetable Reminders bot. Hope it has helped you to attend your classes on time and make more informed decisions when choosing modules! Stay tuned for more features :)"
@@ -946,8 +946,6 @@ def activateReminders(message):
             elif len(result["reminders"]) != 0:
                 bot.send_message(message.chat.id, "Select a timing below:", reply_markup=gen_time_options())
                 user_state[str(user)]["setTime"] = True
-                username = message.from_user.first_name
-                bot.send_message(738423299, f'{username} is activating reminders.')
             else:
                 bot.send_message(message.chat.id, "⚠️ It seems you do not have any upcoming classes.\nTo save a new timetable, enter /remove to delete your old timetable, then enter /add.")
     else: 
@@ -1114,10 +1112,7 @@ def validate_and_save(message):
                         userInfo = {"_id": message.chat.id, "userTimetable": output, "reminders": user_reminders, "reminderOn":False, "list_of_jobs": None, "AY/Sem": [academic_year, sem_index], "module_names": module_names}
                         collection.insert_one(userInfo)
                         user_state[str(user)]["addTimetable"] = False
-                        user_state[userID]["isBusy"] = False
-                        username = message.from_user.first_name
-                        print(f'{username} has successfully added timetable to the database.')
-                        bot.send_message(738423299, f'{username} has added timetable to the database.')
+                        user_state[userID]["isBusy"] = False      
                         bot.send_message(message.chat.id, "✅ Your timetable has been successfully added!\n\nUse /activate to set your reminders.", reply_markup=gen_menu())
         except SemesterNotFoundError:
             bot.send_message(message.chat.id, "⚠️ I've detected some modules which are not ongoing during the specified semester. Please send your NUSMods timetable link again.\nPress ❌ Cancel to exit.")

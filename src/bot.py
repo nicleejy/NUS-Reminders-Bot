@@ -1,25 +1,26 @@
-from __future__ import print_function
-from datetime import date, time, timedelta, timezone, datetime, timezone
-from telebot import types
-from telebot.types import Chat, ChatMember, InlineKeyboardMarkup, InlineKeyboardButton, ReplyKeyboardMarkup, Update, User
-from apscheduler.schedulers.background import BackgroundScheduler
-from apscheduler.jobstores.mongodb import MongoDBJobStore
-from apscheduler.executors.pool import ThreadPoolExecutor, ProcessPoolExecutor
-from flask import Flask, request
-from pytz import timezone
 import os.path
 import requests
 import telebot
-from telebot.apihelper import get_file, get_file_url, send_message
 import validators
 import re
 import random
-import datetime
-from dateutil import parser
-from pymongo import MongoClient, message, results
 import certifi
 import uuid
 import pytz
+
+
+from datetime import date, timedelta, timezone, datetime, timezone
+from telebot import types
+from telebot.types import InlineKeyboardMarkup, InlineKeyboardButton
+from apscheduler.schedulers.background import BackgroundScheduler
+from apscheduler.jobstores.mongodb import MongoDBJobStore
+from apscheduler.executors.pool import ThreadPoolExecutor, ProcessPoolExecutor
+from flask import Flask
+from pytz import timezone
+from telebot.apihelper import get_file
+from dateutil import parser
+from pymongo import MongoClient
+
 
 ca = certifi.where()
 TOKEN = 'token'
@@ -110,24 +111,6 @@ def gen_menu():
     return markup
 
 
-# Notifications for users
-message_to_users = ""
-
-
-def notify(msg):
-    results = collection.find({})
-    user_list = []
-    test = [738423299]
-    if collection.count_documents({}) != 0:
-        print(str(collection.count_documents({})) + " user records present.")
-        for result in results:
-            userID = result["_id"]
-            user_list.append(userID)
-    for id in user_list:
-        bot.send_message(id, msg, reply_markup=gen_menu(),
-                         parse_mode="Markdown")
-
-
 option_button = ['About', 'Eligible Modules',
                  'Exam Info', 'Details', 'Go back']
 goodbye = ['See you soon!', 'Have a nice day :)', 'Have a great day!',
@@ -175,6 +158,8 @@ def schedule_jobs(job_list, userID, timing):
 
 
 # Turn off reminders, clear stored timetable if all jobs have been executed
+
+
 def isCompleted(user):
     if collection.count_documents({"_id": user}) != 0:
         entry = collection.find_one({"_id": user})
@@ -187,10 +172,7 @@ def isCompleted(user):
         if len(userSpecificJobs) == 0:
             bot.send_message(
                 user, "🎉 Congratulations on completing the semester! Wishing you all the best for your final examinations! :)")
-            print("This is the final reminder for user " +
-                  str(user) + ". There are no more reminders left.")
             collection.delete_one({"_id": user})
-            print("Removing data of user " + str(user))
 
 # Construct reminders for lessons
 
@@ -209,8 +191,6 @@ def get_sg_time():
 
 
 def updateReminderList(list_of_reminders):
-    print("Current date/time in Singapore:")
-    print(get_sg_time())
     updated_reminders = []
     for data in list_of_reminders:
         aware = sg_timezone.localize(data[1])
@@ -410,7 +390,6 @@ def convertTime(input):
 @bot.message_handler(content_types=["text"], func=lambda message: message.text == "📆 Weekly Overview")
 def gen_overview(message):
     user = message.chat.id
-
     if not isBusy(user):
         if collection.count_documents({"_id": user}) == 0:
             bot.send_message(
@@ -619,10 +598,6 @@ def ammend_timings(adv_time, curr):
     for reminder in curr:
         new_reminders.append([reminder[0], reminder[1] - timedelta(
             minutes=adv_time), reminder[2], reminder[3], reminder[4]])
-    print("Updated reminders:")
-
-    for reminder in new_reminders:
-        print(reminder)
     return new_reminders
 
 # Returns only the module code from the inlineKeyboard string (used to search NUSMods)
@@ -661,7 +636,6 @@ def process_photo(msg):
     ocr_response = requests.get('https://api.ocr.space/parse/imageurl?apikey=' + OCR_API_KEY + '&url=' +
                                 image_url + '&language=eng&detectOrientation=True&filetype=JPG&OCREngine=2&isTable=True&scale=True')
     imageInfo = ocr_response.json()
-    print(imageInfo)
     try:
         if imageInfo['IsErroredOnProcessing'] == False:
             text_from_photo = imageInfo['ParsedResults'][0]['ParsedText']
@@ -793,13 +767,9 @@ def get_user_timetable(message):
 @bot.message_handler(content_types=["text"], func=lambda message: message.text == "📷 Info")
 def activate_info(message):
     user = message.chat.id
-    print("Current state:")
-    print(user_state)
-    print("Handled by info module.")
 
     if not isBusy(user):
         state_handler(user, "getModuleInfo", 1)
-        print(user_state)
         bot.send_message(message.chat.id, "Send me a clear *photo* or *URL* of your NUSMods timetable:",
                          parse_mode='Markdown', reply_markup=cancel())
     else:
@@ -828,8 +798,6 @@ def send_help(message):
 @bot.message_handler(content_types=["text"], func=lambda message: message.text == "❌ Cancel")
 def terminate_operation(message):
     user = str(message.chat.id)
-    print(user_state)
-
     if not isBusy(user):
         if user in user_state:
             user_state[user]["getModuleInfo"] = 0
@@ -888,7 +856,6 @@ def clearUserData(message):
 @bot.message_handler(commands=['add'])
 def processTimetable(message):
     user = message.chat.id
-
     if not isBusy(user):
         if collection.count_documents({"_id": int(user)}) != 0:
             bot.send_message(
@@ -898,15 +865,11 @@ def processTimetable(message):
             bot.send_message(
                 message.chat.id, "📎 Please send your NUSMods Timetable Link here!", reply_markup=cancel())
 
-    print("Current state:")
-    print(user_state)
-
 
 @bot.message_handler(commands=['deactivate'])
 def stopReminders(message):
     user = message.chat.id
     state_handler(user, "addTimetable", True)
-
     if not isBusy(user):
         state_handler(user, "isBusy", True)
         if collection.count_documents({"_id": user}) == 0:
@@ -943,7 +906,6 @@ def stopReminders(message):
 @bot.message_handler(commands=['activate'])
 def activateReminders(message):
     user = message.chat.id
-
     if not isBusy(user):
         if collection.count_documents({"_id": user}) == 0:
             bot.send_message(
@@ -985,8 +947,6 @@ def bug_reporting(msg):
 
 @bot.message_handler(content_types=['text'], func=lambda message: bug_reporting(message))
 def save_bug_report(message):
-    print("Current state:")
-    print(user_state)
     user = str(message.chat.id)
     if "/" not in message.text:
         bugReport = {"_id": user + "BugReport-" +
@@ -1025,10 +985,6 @@ def answer_set_time(call):
     current_reminders = (collection.find_one({"_id": user}))["reminders"]
     collection.update_one(
         {"_id": user}, {"$set": {"reminders": updateReminderList(current_reminders)}})
-    print("Updating reminders.")
-
-    for i in updateReminderList(current_reminders):
-        print(i)
 
     result = collection.find_one({"_id": user})
     if call.data in reminder_timings:
@@ -1087,8 +1043,6 @@ def saveTimetable(msg):
 def validate_and_save(message):
     user = str(message.chat.id)
     global main_user_timetable
-    print("Current state:")
-    print(user_state)
 
     if validators.url(message.text) and 'nusmods.com' in message.text:
         # handle errors in url, prevent generation of timetable with an invalid url
@@ -1130,9 +1084,6 @@ def validate_and_save(message):
                         collection.insert_one(userInfo)
                         state_handler(user, "addTimetable", False)
                         state_handler(user, "isBusy", False)
-                        username = message.from_user.first_name
-                        print(
-                            f'{username} has successfully added timetable to the database.')
                         bot.send_message(
                             message.chat.id, "✅ Your timetable has been successfully added!\n\nUse /activate to set your reminders.", reply_markup=gen_menu())
         except SemesterNotFoundError:
@@ -1164,7 +1115,6 @@ def searchFunction(msg):
 @bot.message_handler(content_types=['text'], func=lambda message: searchFunction(message))
 def search_module(message):
     user = message.chat.id
-    print('Handled by search function.')
     state_handler(user, "isBusy", True)
     make_uppercase = message.text.upper()
     try:
@@ -1179,7 +1129,6 @@ def search_module(message):
                 if len(module.split(' ')) > 6:
                     result[count1] = " ".join(
                         (module.split(' '))[0:4]) + '... ' + (module.split(' '))[-1]
-            print(result)
             if len(result) > 8:
                 bot.send_message(
                     message.chat.id, "⚠️ Too many modules! Showing only the first 8 modules.")
@@ -1206,7 +1155,6 @@ def checkActiveURL(msg):
 @bot.message_handler(content_types=['text'], func=lambda message: checkActiveURL(message))
 def handle_url_sent(message):
     user = message.chat.id
-    print('Handled by URL info function.')
     result = user_state[str(user)]["result"]
     state_handler(user, "isBusy", True)
     if validators.url(message.text) and 'nusmods.com' in message.text:
@@ -1262,10 +1210,7 @@ def handle_url_sent(message):
 def handle_image_sent(message):
     user = message.chat.id
     if str(user) in user_state:
-        print("Current state:")
-        print(user_state)
         if user_state[str(user)]["getModuleInfo"] == 1:
-            print('Handled by image info function.')
             state_handler(user, "isBusy", True)
             bot.send_message(message.chat.id, 'Processing... please wait!')
             try:
@@ -1273,12 +1218,10 @@ def handle_image_sent(message):
                 if not result:
                     bot.send_message(
                         message.chat.id, '⚠️ A server error ocurred.\nPlease wait before sending me another photo.\nAlternatively, you may press ❌ Cancel to exit.')
-                    print("API might be down, check API status.")
                     state_handler(user, "isBusy", False)
                 elif result == 'error':
                     bot.send_message(
                         message.chat.id, '⚠️ Woops! Please send me a timetable from NUSMods only.')
-                    print('Wrong image file sent.')
                     state_handler(user, "isBusy", False)
                 else:
                     if len(result) != 0:
@@ -1321,7 +1264,6 @@ def ans_options(call):
 @bot.callback_query_handler(func=lambda call: ans_options(call))
 def callback_query(call):
     user = call.message.chat.id
-    print('Handled by options initial callback query.')
     choice = call.data
     if choice == "Cancel":
         bot.answer_callback_query(call.id)
@@ -1330,7 +1272,6 @@ def callback_query(call):
         if str(user) in user_state:
             del user_state[str(user)]
     else:
-        print(isolate_module_code_from_callback(choice))
         if isolate_module_code_from_callback(choice) != False:
             isolate_module = isolate_module_code_from_callback(choice)
             state_handler(user, "isoModule", isolate_module)
@@ -1369,7 +1310,6 @@ def genModuleDetails(call):
     moduleInfoData = user_state[str(user)]["modData"]
     isolate_module = user_state[str(user)]["isoModule"]
     result = user_state[str(user)]["result"]
-    print('Handled by options callback query.')
     if call.data == 'Go back':
         bot.answer_callback_query(call.id, text=False, show_alert=False)
         bot.send_message(
@@ -1382,7 +1322,6 @@ def genModuleDetails(call):
         semester_exists = False
         # get current semester
         set_semester = sem_index + 1
-        print(user_state)
         # check if semester data is specified by the user
         if 0 < user_state[str(user)]["semIndex"] <= 2:
             print("Semester has been specified.")
@@ -1525,16 +1464,6 @@ def answerReminderCallback(call):
 
 scheduler.start()
 scheduler.print_jobs()
-
-# For debugging reminders
-#sample = "https://nusmods.com/timetable/sem-1/share?ACC1701X=LEC:X1,TUT:X14&CFG1002=LEC:09&CS1101S=TUT:09A,REC:02A,LEC:1&CS1231S=TUT:19,LEC:1&MA1521=LEC:1,TUT:3&MA2001=LEC:2,TUT:17https://nusmods.com/timetable/sem-1/share?ACC1701X=LEC:X1,TUT:X14&CFG1002=LEC:09&CS1101S=TUT:09A,REC:02A,LEC:1&CS1231S=TUT:19,LEC:1&MA1521=LEC:1,TUT:3&MA2001=LEC:2,TUT:17"
-
-#output = extractData(cleanTimetableLink(sample), sample)
-# print(output)
-# unsorted_reminders = generate_reminders(output, sample, academic_year)
-# sorted_reminders = sorted(unsorted_reminders, key=lambda t: (t[1], t[2]))
-# for i in unsorted_reminders:
-#     print(i)
 
 # General callback handler to handle inactive button activations
 

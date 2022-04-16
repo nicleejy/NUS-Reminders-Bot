@@ -2,24 +2,25 @@ import os.path
 import requests
 import telebot
 import validators
-import re
-import random
 import certifi
 import uuid
 import pytz
+import datetime
 
 
-from datetime import date, timedelta, timezone, datetime, timezone
-from telebot import types
-from telebot.types import InlineKeyboardMarkup, InlineKeyboardButton
+from datetime import timedelta
+from telebot.apihelper import ApiException
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.jobstores.mongodb import MongoDBJobStore
 from apscheduler.executors.pool import ThreadPoolExecutor, ProcessPoolExecutor
-from flask import Flask
-from pytz import timezone
-from telebot.apihelper import get_file
+from flask import Flask, request
 from dateutil import parser
 from pymongo import MongoClient
+from errors import *
+from utils import *
+from data import *
+from buttons import *
+from messages import *
 
 
 ca = certifi.where()
@@ -30,7 +31,6 @@ server = Flask(__name__)
 
 sg_timezone = pytz.timezone("Asia/Singapore")
 
-OCR_API_KEY = 'ley'
 
 DATABASE_URL = os.environ.get("MONGODB_URI")
 cluster = MongoClient(DATABASE_URL)
@@ -52,23 +52,6 @@ executors = {
     'default': ThreadPoolExecutor(20),
     'processpool': ProcessPoolExecutor(5)
 }
-
-global academic_year
-global sem_index
-
-
-class Error(Exception):
-    pass
-
-
-class SemesterNotFoundError(Error):
-    # semester index not present in database
-    pass
-
-
-class YearNotFoundError(Error):
-    # data for the year not present in database
-    pass
 
 
 scheduler = BackgroundScheduler(
@@ -101,49 +84,11 @@ def isBusy(userID):
     return False
 
 
-def gen_menu():
-    markup = types.ReplyKeyboardMarkup(row_width=2, resize_keyboard=True)
-    button1 = types.KeyboardButton("📚 My Classes")
-    button2 = types.KeyboardButton("📆 Weekly Overview")
-    button3 = types.KeyboardButton("📷 Info")
-    button4 = types.KeyboardButton("🔍 Search")
-    markup.add(button1, button2, button3, button4)
-    return markup
-
-
-option_button = ['About', 'Eligible Modules',
-                 'Exam Info', 'Details', 'Go back']
-goodbye = ['See you soon!', 'Have a nice day :)', 'Have a great day!',
-           'See you later!', 'Goodbye for now!', 'See you later!', 'Goodbye!']
-
 # for debugging
 main_user_timetable = {}
 
 # maintains the process flow for each user
 user_state = {}
-
-# AY:[start of sem1, start of sem2]
-# Note that info for 2026 onwards has yet to be updated on the official NUS website
-nus_academic_calendar = {'2021-2022': [date(2021, 8, 2), date(2022, 1, 10)],
-                         '2022-2023': [date(2022, 8, 1), date(2023, 1, 9)],
-                         '2023-2024': [date(2023, 8, 7), date(2024, 1, 15)],
-                         '2024-2025': [date(2024, 8, 5), date(2025, 1, 13)]}
-
-days_of_week = {'Monday': 0, 'Tuesday': 1, 'Wednesday': 2,
-                'Thursday': 3, 'Friday': 4, 'Saturday': 5, 'Sunday': 6}
-
-
-help_message = "*Help Menu*\n\n1. *How to add my timetable? 📚*\n\nUse the /add command and send in the link to your timetable from NUSMods.\
-    \n\nUpon successfully saving your timetable, you will be able to use the rest of the features.\n\n\n2. *How to obtain weekly overview? 📆*\n\nUse the *📆 Weekly Overview* button to get a summary of your classes for the current week.\
-    \n\nOnly upcoming classes are reflected in the weekly summary.\n\n\n3. *How do I set my reminders? ⏰*\n\nWith the /activate command, you can set how early in advance you want to be notified.\nIf you do not wish to receive reminders, use the /deactivate command.\
-    \n\n\n4. *Where can I view my timetable? 🧾*\n\nAfter adding your timetable, you will be able to view class information such as venues and lesson times by using the *📚 My Classes* button.\
-    \n\n\n5. *How to retrieve module information? ℹ️*\n\nYou may use the following commands to obtain information about specific modules.\n\n*🔍 Search*\
-    \nUse this command and enter module codes on a new line.\
-    \n\n*📷 Info*\nUse this to retrieve module information using either an image or a link to your NUSMods timetable.\
-    \n\n\n6. *How to use image recognition feature? 📸*\n\nUse *📷 Info* and send in a PNG/JPG file of your timetable from NUSMods to retrieve data for all your modules.\n\nAlternatively, you may also send in a link to your timetable.\
-    \n\n\n7. *How do I delete my timetable? 🗑*\n\nUse the /remove command to delete all saved timetable information. This feature also automatically deactivates any active reminders.\
-    \n\n\n8. *Where do I report bugs? 🐞*\n\nShould you encounter any bugs while using the bot, please enter /bugs and report the issue in the next message.\
-    \n\n\nThank you for using NUS Timetable Reminders bot. Hope it has helped you to attend your classes on time and make more informed decisions when choosing modules! Stay tuned for more features :)"
 
 
 def schedule_jobs(job_list, userID, timing):
@@ -158,8 +103,6 @@ def schedule_jobs(job_list, userID, timing):
 
 
 # Turn off reminders, clear stored timetable if all jobs have been executed
-
-
 def isCompleted(user):
     if collection.count_documents({"_id": user}) != 0:
         entry = collection.find_one({"_id": user})
@@ -170,67 +113,54 @@ def isCompleted(user):
                 if job != None:
                     userSpecificJobs.append(job)
         if len(userSpecificJobs) == 0:
-            bot.send_message(
-                user, "🎉 Congratulations on completing the semester! Wishing you all the best for your final examinations! :)")
+            try:
+                bot.send_message(
+                    user, "🎉 Congratulations on completing the semester! Wishing you all the best for your final examinations! :)")
+            except ApiException as e:
+                print(f"Failed to send message to user {user}.")
+                print(e)
+            print("This is the final reminder for user " +
+                  str(user) + ". There are no more reminders left.")
             collection.delete_one({"_id": user})
+            print("Removing data of user " + str(user))
 
 # Construct reminders for lessons
 
 
 def make_reminder(job, userID, timing):
     state_handler(userID, "reminder", True)
-    isCompleted(userID)
-    bot.send_message(userID, "📚 " + job[0] + " starts " + timing + " 📚", reply_markup=gen_markup_reminder(
-        job[0], convertTime(job[2]) + ' - ' + convertTime(job[3]), job[4]))
+    try:
+        bot.send_message(userID, "📚 " + job[0] + " starts " + timing + " 📚", reply_markup=gen_markup_reminder(
+            job[0], convertTime(job[2]) + ' - ' + convertTime(job[3]), job[4]))
+        isCompleted(userID)
+    except ApiException as e:
+        print(e)
 
 
-def get_sg_time():
-    return datetime.datetime.now(sg_timezone)
+def refresh():
 
-# function to update the reminder list
+    academic_year = ""
+    sem_index = 0
 
+    if relaxed_calendar["2021-2022"][0] <= get_sg_time().date() < relaxed_calendar["2022-2023"][0]:
+        academic_year = '2021-2022'
+        if get_sg_time().date() >= relaxed_calendar["2021-2022"][1]:
+            sem_index = 1
+    elif relaxed_calendar["2022-2023"][0] <= get_sg_time().date() < relaxed_calendar["2023-2024"][0]:
+        academic_year = '2022-2023'
+        if get_sg_time().date() >= relaxed_calendar["2022-2023"][1]:
+            sem_index = 1
+    elif relaxed_calendar["2023-2024"][0] <= get_sg_time().date() < relaxed_calendar["2024-2025"][0]:
+        academic_year = '2023-2024'
+        if get_sg_time().date() >= relaxed_calendar["2023-2024"][1]:
+            sem_index = 1
+    elif relaxed_calendar["2024-2025"][0] <= get_sg_time().date() < relaxed_calendar["2025-2026"][0]:
+        academic_year = '2024-2025'
+        if get_sg_time().date() >= relaxed_calendar["2024-2025"][1]:
+            sem_index = 1
+    else:
+        raise CalendarOutOfRangeError
 
-def updateReminderList(list_of_reminders):
-    updated_reminders = []
-    for data in list_of_reminders:
-        aware = sg_timezone.localize(data[1])
-        if get_sg_time() <= aware:
-            updated_reminders.append(data)
-    return updated_reminders
-
-
-def configure_search():
-
-    global academic_year
-    global sem_index
-
-    if date(2021, 8, 2) <= get_sg_time().date() < date(2022, 8, 1):
-        ay = '2021-2022'
-        if get_sg_time().date() >= date(2021, 12, 5):
-            sem = 1
-        else:
-            sem = 0
-    elif date(2022, 8, 1) <= get_sg_time().date() < date(2023, 8, 7):
-        ay = '2022-2023'
-        if get_sg_time().date() >= date(2022, 12, 4):
-            sem = 1
-        else:
-            sem = 0
-    elif date(2023, 8, 7) <= get_sg_time().date() < date(2024, 8, 5):
-        ay = '2023-2024'
-        if get_sg_time().date() >= date(2023, 12, 10):
-            sem = 1
-        else:
-            sem = 0
-    elif date(2024, 8, 5) <= get_sg_time().date() < date(2025, 8, 3):
-        ay = '2024-2025'
-        if get_sg_time().date() >= date(2024, 12, 8):
-            sem = 1
-        else:
-            sem = 0
-
-    academic_year = ay
-    sem_index = sem
     results = collection.find({})
 
     if collection.count_documents({}) != 0:
@@ -255,134 +185,12 @@ def configure_search():
 
 
 # refresh date and time information and update user database
-configure_search()
+refresh()
 
 # Cron trigger to refresh date and time information daily
-scheduler.add_job(configure_search, trigger='cron', hour='4', minute='30',
+scheduler.add_job(refresh, trigger='cron', hour='4', minute='30',
                   jobstore="mongo", id="updateAY/Sem", replace_existing=True)
 
-# get data from NUSMods
-
-
-def fetch_nusmods_data(ay):
-    try:
-        module_names = requests.get(
-            "https://api.nusmods.com/v2/" + ay + "/moduleList.json")
-    except Exception as e:
-        print(e)
-        return "data_not_found"
-    database_of_module_names = module_names.json()
-    return database_of_module_names
-
-
-def utc_to_local(utc_dt):
-    return utc_dt.astimezone(timezone('Asia/Singapore'))
-
-
-def randomNumber(arr):
-    return random.randint(0, len(arr) - 1)
-
-
-def detectSem(link):
-    semList = link.split("timetable/", 1)[1]
-    semester = semList[4:5]
-    return semester
-
-# Parse timetable URL and extract relevant information for search
-
-
-def cleanTimetableLink(link):
-    mod_details = {}
-    modules = link.split('share?', 1)[1]
-    split_module_det = modules.split('&')
-    for mod in split_module_det:
-        cleaned_data = []
-        keys = mod.split('=')[0]
-        values = mod.split('=')[1]
-        subValues = values.split(',')
-        for session in subValues:
-            cleaned_data.append(session.split(':'))
-        mod_details[keys] = cleaned_data
-    return mod_details
-
-# Example of the output obtained from the above function
-# [module name, [classname, day, time, [weeks], venue], [classname, day, time]]
-#{'ACC1701X': [['LEC', 'X1'], ['TUT', 'X07']], 'CFG1002': [['LEC', '09']], 'CS1101S': [['TUT', '09A'], ['REC', '02A'], ['LEC', '1']], 'CS1231S': [['TUT', '19'], ['LEC', '1']], 'MA1521': [['LEC', '1'], ['TUT', '3']], 'MA2001': [['LEC', '2'], ['TUT', '17']]}
-
-# Extracted data in the following format
-#[module_code, [lesson_type, day, starttime, endtime, venue]]
-# [['ACC1701X', ['Tutorial X07', 'Tuesday', '1300', '1400', [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13], 'E-Learn_C'], ['Lecture X1', 'Thursday', '1000', '1200', [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13], 'E-Learn_C']],
-#['CFG1002', ['Lecture 09', 'Wednesday', '0600', '0800', [7, 8, 9, 10, 11, 12], 'E-Learn_B']],
-#['CS1101S', ['Tutorial 09A', 'Tuesday', '1400', '1600', [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13], 'COM1-0217'], ['Recitation 02A', 'Thursday', '0900', '1000', [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13], 'E-Learn_C'], ['Lecture 1', 'Wednesday', '1000', '1200', [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13], 'E-Learn_C'], ['Lecture 1', 'Friday', '1000', '1200', [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13], 'E-Learn_C']],
-#['CS1231S', ['Lecture 1', 'Thursday', '1200', '1400', [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13], 'E-Learn_C'], ['Tutorial 19', 'Thursday', '1400', '1600', [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13], 'COM1-0208'], ['Lecture 1', 'Friday', '1500', '1600', [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13], 'E-Learn_C']],
-#['MA1521', ['Lecture 1', 'Wednesday', '1800', '2000', [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13], 'E-Learn_B'], ['Lecture 1', 'Friday', '1800', '2000', [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13], 'E-Learn_B'], ['Tutorial 3', 'Wednesday', '0900', '1000', [3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13], 'E-Learn_B']],
-# ['MA2001', ['Lecture 2', 'Friday', '1200', '1400', [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13], 'E-Learn_B'], ['Tutorial 17', 'Wednesday', '1500', '1600', [3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13], 'E-Learn_B']]]
-
-
-# Extract data for each lesson in the timetable
-def extractData(dict_of_mods, link):
-    modList = []
-    for key, value in dict_of_mods.items():
-        semester_exists = False
-        subList = []
-        subList.append(key)
-        try:
-            response = requests.get(
-                "https://api.nusmods.com/v2/" + academic_year + "/modules/" + key + ".json")
-        except Exception as e:
-            print(e)
-            return "data_not_found"
-        dataBase = response.json()
-        sem = 0
-        sem_data = dataBase["semesterData"]
-        user_timetable_sem = int(detectSem(link))
-        if user_timetable_sem >= 3 or user_timetable_sem == 0:
-            raise Exception("Specified semester does not exist.")
-        else:
-            for semester in sem_data:
-                if semester["semester"] == user_timetable_sem:
-                    semester_exists = True
-                    break
-                sem += 1
-            if semester_exists != False:
-                print("Found data for semester " +
-                      str(user_timetable_sem) + ".")
-                moduleData = sem_data[sem]["timetable"]
-                for session in moduleData:
-                    class_type = ((session["lessonType"]).upper())[0:3]
-                    for class_detail in value:
-                        if class_type == class_detail[0] and session["classNo"] == class_detail[1]:
-                            required_data = [session["lessonType"] + ' ' + session["classNo"], session["day"], session["startTime"],
-                                             session["endTime"], session["weeks"], session["venue"] if session["venue"] != "" else "No venue info"]
-                            subList.append(required_data)
-                modList.append(subList)
-            else:
-                print("No data found for semester  " +
-                      str(user_timetable_sem) + ".")
-                raise SemesterNotFoundError
-    return modList
-
-
-def convertTime(input):
-    afternoon = False
-    h, m = int(input[0:2]), int(input[2:4])
-    if h > 12:
-        h = h - 12
-        afternoon = True
-    elif 9 < h < 11:
-        afternoon = False
-    elif h == 12:
-        afternoon = True
-    elif h == 0:
-        h = 12
-        afternoon = False
-
-    def is_afternoon(h, m):
-        if afternoon:
-            return str(h) + ":" + "{:02d}".format(m) + "pm"
-        else:
-            return str(h) + ":" + "{:02d}".format(m) + "am"
-    return is_afternoon(h, m)
 
 # generates weekly overview
 
@@ -390,6 +198,7 @@ def convertTime(input):
 @bot.message_handler(content_types=["text"], func=lambda message: message.text == "📆 Weekly Overview")
 def gen_overview(message):
     user = message.chat.id
+
     if not isBusy(user):
         if collection.count_documents({"_id": user}) == 0:
             bot.send_message(
@@ -413,11 +222,8 @@ def gen_overview(message):
                 timedelta(days=(3 - current_weekday) + offset)
             fri = current_date + timedelta(days=(4 - current_weekday) + offset)
 
-            mon_data = []
-            tues_data = []
-            weds_data = []
-            thurs_data = []
-            fri_data = []
+            mon_data, tues_data, weds_data, thurs_data, fri_data = (
+                [] for i in range(5))
 
             current_reminders = (collection.find_one({"_id": user}))[
                 "reminders"]
@@ -425,6 +231,7 @@ def gen_overview(message):
                 {"_id": user}, {"$set": {"reminders": updateReminderList(current_reminders)}})
             new_reminders = (collection.find_one({"_id": user}))["reminders"]
             print("Updating reminders of user " + str(user) + ".")
+
             for reminder in new_reminders:
                 if reminder[1].date() == mon.date():
                     mon_data.append(reminder)
@@ -461,254 +268,6 @@ def gen_overview(message):
                 fri.strftime('%d/%m/%Y') + "*\n\n" + iterator(fri_data)
             bot.send_message(user, msg, parse_mode='Markdown')
 
-
-# compare the dates in the list of reminders to current day and returns only the future dates (datetime object is modified here to combine the time for scheduler)
-def calibrate_reminder_start(list_of_reminders):
-    calibrated_reminders = []
-    for data in list_of_reminders:
-        if datetime.date.today() <= data[1]:
-            date_object = data[1]
-            combined_datetime = datetime.datetime.combine(
-                date_object, datetime.time(int(data[2][:2]), int(data[2][2:])))
-            calibrated_reminders.append(
-                [data[0], combined_datetime, data[2], data[3], data[4]])
-    return calibrated_reminders
-
-# Deprecated function
-
-
-def formatOutput(arr):
-    initial = "Here are your classes for the week!"
-    for mod in arr:
-        initial += '\n' + mod[0]
-        for classes in mod[1:]:
-            initial += "\n- " + classes[0] + " (" + classes[1] + " " + convertTime(
-                classes[2]) + "-" + convertTime(classes[3]) + ")"
-    return initial
-
-# Parse data returned from the OCR API and search NUSMods for module name
-
-
-def iterate_modules_for_image(arr):
-    sifter = ['Total', 'Module']
-    match_detected = []
-    mod_names = fetch_nusmods_data(academic_year)
-    if mod_names == "data_not_found":
-        print("Information not available for the current academic year.")
-        raise YearNotFoundError
-    else:
-        if sifter[0] and sifter[1] in arr:
-            for mod in mod_names:
-                if mod['moduleCode'] in arr:
-                    match_detected.append(mod['title'].replace(
-                        ',', '') + ' (' + mod['moduleCode'] + ')')
-            return match_detected
-        else:
-            return 'error'
-
-# Parse data from URL string and search NUSMods for module name
-
-
-def iterate_modules_for_url(arr):
-    match_detected = []
-    mod_names = fetch_nusmods_data(academic_year)
-    if mod_names == "data_not_found":
-        print("Information not available for the current academic year.")
-        raise YearNotFoundError
-    else:
-        for mod in mod_names:
-            if mod['moduleCode'] in arr:
-                match_detected.append(mod['title'].replace(
-                    ',', '') + ' (' + mod['moduleCode'] + ')')
-        return match_detected
-
-# Checks if module is S/U-able
-
-
-def su_convert(bool):
-    if bool:
-        return "Yes"
-    else:
-        return "No"
-
-# Calculates the total workload (in number of hours) for a module
-
-
-def calc_workload(arr):
-    try:
-        count = 0
-        for i in arr:
-            count += int(i)
-        return str(count) + ' hours'
-    except:
-        return 'Unable to retrieve data.'
-
-# Create reminders based on the module information and current semester/academic year
-
-
-def generate_reminders(arr, link, this_AY):
-    reminder_list = []
-    lesson_reminder = []
-
-    for modSet in arr:
-        moduleName = modSet[0]
-        for session in modSet[1:]:
-            accounted_for_recess_week = False
-            try:
-                if session[4][0] == 7:
-                    initial = 7 + session[4][0] * 7
-                else:
-                    if sem_index == 0:
-                        initial = session[4][0] * 7
-                        print(f"Initial start for semester 1: {initial}")
-                    elif sem_index == 1:
-                        initial = (session[4][0] - 1) * 7
-                        print(f"Initial start for semester 2: {initial}")
-                add_days = 0
-                gather_data = [moduleName + ' ' + session[0], nus_academic_calendar[this_AY][int(detectSem(
-                    link)) - 1] + timedelta(days=initial + days_of_week[session[1]]), session[2], session[3], session[5]]
-                lesson_reminder.append(gather_data)
-                weekList = session[4]
-
-                for j in range(1, len(weekList)):
-                    weeks_between = weekList[j] - weekList[j - 1]
-                    skip = weeks_between * 7
-                    add_days = add_days + skip
-
-                    if weekList[j] > 6 and not accounted_for_recess_week:
-                        add_days = add_days + 7
-                        accounted_for_recess_week = True
-
-                    subsequent_weeks = [moduleName + ' ' + session[0], nus_academic_calendar[this_AY][int(detectSem(
-                        link)) - 1] + timedelta(days=initial + days_of_week[session[1]] + add_days), session[2], session[3], session[5]]
-                    lesson_reminder.append(subsequent_weeks)
-            except Exception as e:
-                # Modules which have no week array and contain a dictionary object instead
-                print(e)
-                continue
-    reminder_list.extend(lesson_reminder)
-    return reminder_list
-
-# Change the timings of reminders to user selection
-
-
-def ammend_timings(adv_time, curr):
-    print("Ammending timings to " + str(adv_time) + " minutes in advance.")
-    new_reminders = []
-    for reminder in curr:
-        new_reminders.append([reminder[0], reminder[1] - timedelta(
-            minutes=adv_time), reminder[2], reminder[3], reminder[4]])
-    return new_reminders
-
-# Returns only the module code from the inlineKeyboard string (used to search NUSMods)
-
-
-def isolate_module_code_from_callback(response):
-    try:
-        callback = response.split()[-1]
-        module_code = callback[1:len(callback) - 1]
-        return module_code
-    except Exception as isolateModError:
-        print(isolateModError)
-        return False
-
-# Get module names from a given module code array
-
-
-def get_module_name(arr):
-    found_name = []
-    mod_names = fetch_nusmods_data(academic_year)
-    if mod_names == "data_not_found":
-        print("Information not available for the current academic year.")
-        raise YearNotFoundError
-    else:
-        for mod in mod_names:
-            for module_code in arr:
-                if mod['moduleCode'] in module_code:
-                    found_name.append(mod['title'] + ' (' + module_code + ')')
-        return found_name
-
-
-def process_photo(msg):
-    fileID = msg.photo[-1].file_id
-    image_path = get_file(TOKEN, fileID)['file_path']
-    image_url = 'https://api.telegram.org/file/bot' + TOKEN + '/' + image_path
-    ocr_response = requests.get('https://api.ocr.space/parse/imageurl?apikey=' + OCR_API_KEY + '&url=' +
-                                image_url + '&language=eng&detectOrientation=True&filetype=JPG&OCREngine=2&isTable=True&scale=True')
-    imageInfo = ocr_response.json()
-    try:
-        if imageInfo['IsErroredOnProcessing'] == False:
-            text_from_photo = imageInfo['ParsedResults'][0]['ParsedText']
-            processed = re.split('\t|\r|\n', text_from_photo)
-            key_info = []
-            for elem in processed:
-                if elem != '' and len(elem) > 6:
-                    key_info.extend(elem.split(' '))
-            return iterate_modules_for_image(key_info)
-        else:
-            return False
-    except TypeError as e:
-        print(e)
-        return False
-
-# Generate buttons for modules
-
-
-def gen_markup(detected_modules):
-    markup = InlineKeyboardMarkup()
-    markup.row_width = 1
-    shortened = detected_modules[0:8]
-    shortened.append("Cancel")
-    for module in shortened:
-        markup.add(InlineKeyboardButton(
-            str(module), callback_data=str(module)))
-    return markup
-
-# Generate buttons for module options
-
-
-def gen_markup_info(input):
-    markup = InlineKeyboardMarkup()
-    markup.row_width = 2
-    markup.add(InlineKeyboardButton(input[0], callback_data=input[0]), InlineKeyboardButton(
-        input[1], callback_data=input[1]))
-    markup.add(InlineKeyboardButton(input[2], callback_data=input[2]), InlineKeyboardButton(
-        input[3], callback_data=input[3]))
-    markup.add(InlineKeyboardButton(input[4], callback_data=input[4]))
-    return markup
-
-# Generate buttons for reminder time setting
-
-
-def gen_time_options():
-    markup = InlineKeyboardMarkup()
-    markup.row_width = 2
-    markup.add(InlineKeyboardButton("10 minutes before", callback_data="10"),
-               InlineKeyboardButton("30 minutes before", callback_data="30"))
-    markup.add(InlineKeyboardButton("1 hour before", callback_data="60"),
-               InlineKeyboardButton("2 hours before", callback_data="120"))
-    markup.add(InlineKeyboardButton("3 hours before", callback_data="180"),
-               InlineKeyboardButton("1 day before", callback_data="1440"))
-    markup.add(InlineKeyboardButton("Cancel", callback_data="x"))
-    return markup
-
-# Generate the display for reminders
-
-
-def gen_markup_reminder(module, time, venue):
-    markup = InlineKeyboardMarkup()
-    markup.row_width = 2
-    markup.add(InlineKeyboardButton(str(module), callback_data='seen'))
-    markup.add(InlineKeyboardButton(str(time), callback_data='seen'),
-               InlineKeyboardButton(str(venue), callback_data='seen'))
-    return markup
-
-
-def cancel():
-    markup = types.ReplyKeyboardMarkup(row_width=1, resize_keyboard=True)
-    button = types.KeyboardButton("❌ Cancel")
-    markup.add(button)
-    return markup
 
 # Generate user timetable
 
@@ -778,16 +337,9 @@ def activate_info(message):
 
 @bot.message_handler(commands=['start', 'menu'])
 def send_welcome(message):
-    bot.send_message(message.chat.id, "*Welcome to NUS Timetable Reminders!* 📆\
-    \n\n\n*To create your reminders:*\
-    \n\n1. */add* and send me your timetable URL 📎\
-    \n\n2. */activate* and select a timing ⏰\
-    \n\n3. Your reminders will be generated! ✅\
-    \n\n\n*Here's what else I can do:*\
-    \n\n📷  Send in a photo/URL of your timetable for *module info*\n\n🔍  *Search* modules from NUSMods\
-    \n\n📚  Get a *weekly overview* of your timetable\
-    \n\nClick on the *menu* button on the bottom left to explore more features!\
-    \n\nIf you need any help, use the /help command :)", parse_mode='Markdown', reply_markup=gen_menu())
+    username = message.from_user.first_name
+    bot.send_message(message.chat.id, "*Hello " + str(username) + "! " +
+                     welcome_message, parse_mode='Markdown', reply_markup=gen_menu())
 
 
 @bot.message_handler(commands=['help'])
@@ -856,6 +408,7 @@ def clearUserData(message):
 @bot.message_handler(commands=['add'])
 def processTimetable(message):
     user = message.chat.id
+
     if not isBusy(user):
         if collection.count_documents({"_id": int(user)}) != 0:
             bot.send_message(
@@ -870,6 +423,7 @@ def processTimetable(message):
 def stopReminders(message):
     user = message.chat.id
     state_handler(user, "addTimetable", True)
+
     if not isBusy(user):
         state_handler(user, "isBusy", True)
         if collection.count_documents({"_id": user}) == 0:
@@ -906,6 +460,7 @@ def stopReminders(message):
 @bot.message_handler(commands=['activate'])
 def activateReminders(message):
     user = message.chat.id
+
     if not isBusy(user):
         if collection.count_documents({"_id": user}) == 0:
             bot.send_message(
@@ -985,6 +540,10 @@ def answer_set_time(call):
     current_reminders = (collection.find_one({"_id": user}))["reminders"]
     collection.update_one(
         {"_id": user}, {"$set": {"reminders": updateReminderList(current_reminders)}})
+    print("Updating reminders.")
+
+    for i in updateReminderList(current_reminders):
+        print(i)
 
     result = collection.find_one({"_id": user})
     if call.data in reminder_timings:
@@ -1050,46 +609,47 @@ def validate_and_save(message):
             state_handler(user, "isBusy", True)
             output = extractData(cleanTimetableLink(
                 message.text), message.text)
-            if output == 'data_not_found':
-                bot.send_message(
-                    message.chat.id, "⚠️ Data currently unavailable.")
-                state_handler(user, "isBusy", False)
-            else:
-                # output represents the raw timetable data
-                unsorted_reminders = generate_reminders(
-                    output, message.text, academic_year)
-                sorted_reminders = sorted(
-                    unsorted_reminders, key=lambda t: (t[1], t[2]))
-                module_names = {}
-                module_codes = []
-                for i in output:
-                    module_codes.append(i[0])
-                names = get_module_name(module_codes)
-                for module in names:
-                    code = str(isolate_module_code_from_callback(module))
-                    module_names[code] = module
+            # output represents the raw timetable data
+            unsorted_reminders = generate_reminders(
+                output, message.text, academic_year)
+            sorted_reminders = sorted(
+                unsorted_reminders, key=lambda t: (t[1], t[2]))
+            module_names = {}
+            module_codes = []
+            for i in output:
+                module_codes.append(i[0])
+            names = get_module_name(module_codes)
+            for module in names:
+                code = str(isolate_module_code_from_callback(module))
+                module_names[code] = module
 
-                user = message.chat.id
-                if collection.count_documents({"_id": user}) == 0:
-                    # stores user ID, timetable and reminders to MongoDB (userTimetable, reminders)
-                    user_reminders = updateReminderList(
-                        calibrate_reminder_start(sorted_reminders))
-                    if len(user_reminders) == 0:
-                        bot.send_message(
-                            message.chat.id, "⚠️ You have no remaining classes, add a timetable for the next semester instead.\nPress ❌ Cancel to exit.")
-                        state_handler(user, "isBusy", False)
-                    else:
-                        userInfo = {"_id": message.chat.id, "userTimetable": output, "reminders": user_reminders, "reminderOn": False,
-                                    "list_of_jobs": None, "AY/Sem": [academic_year, sem_index], "module_names": module_names}
-                        collection.insert_one(userInfo)
-                        state_handler(user, "addTimetable", False)
-                        state_handler(user, "isBusy", False)
-                        bot.send_message(
-                            message.chat.id, "✅ Your timetable has been successfully added!\n\nUse /activate to set your reminders.", reply_markup=gen_menu())
-        except SemesterNotFoundError:
+            user = message.chat.id
+            if collection.count_documents({"_id": user}) == 0:
+                # stores user ID, timetable and reminders to MongoDB (userTimetable, reminders)
+                user_reminders = updateReminderList(
+                    calibrate_reminder_start(sorted_reminders))
+                if len(user_reminders) == 0:
+                    bot.send_message(
+                        message.chat.id, "⚠️ You have no remaining classes. If you wish to add a timetable for the next semester, please wait till after the examinations for the present semester :)")
+                    state_handler(user, "isBusy", False)
+                    terminate_operation(message)
+                else:
+                    userInfo = {"_id": message.chat.id, "userTimetable": output, "reminders": user_reminders, "reminderOn": False,
+                                "list_of_jobs": None, "AY/Sem": [academic_year, sem_index], "module_names": module_names}
+                    collection.insert_one(userInfo)
+                    state_handler(user, "addTimetable", False)
+                    state_handler(user, "isBusy", False)
+                    bot.send_message(
+                        message.chat.id, "✅ Your timetable has been successfully added!\n\nUse /activate to set your reminders.", reply_markup=gen_menu())
+        except SemesterNotFoundException:
             bot.send_message(
                 message.chat.id, "⚠️ I've detected some modules which are not ongoing during the specified semester. Please send your NUSMods timetable link again.\nPress ❌ Cancel to exit.")
             state_handler(user, "isBusy", False)
+        except YearNotFoundException:
+            bot.send_message(
+                message.chat.id, "⚠️ Data for the next academic year is not yet available on NUSMods. Please try again in a few days :)")
+            state_handler(user, "isBusy", False)
+            terminate_operation(message)
         except Exception as e:
             print(e)
             bot.send_message(
@@ -1118,7 +678,7 @@ def search_module(message):
     state_handler(user, "isBusy", True)
     make_uppercase = message.text.upper()
     try:
-        result = iterate_modules_for_url(make_uppercase.split())
+        result = parse_url(make_uppercase.split())
         if len(result) == 0:
             bot.send_message(message.chat.id, "⚠️ No module found.")
             state_handler(user, "isBusy", False)
@@ -1137,9 +697,11 @@ def search_module(message):
                 message.chat.id, "📕 Click on a module for more information:", reply_markup=gen_markup(result))
             state_handler(user, "getModuleInfo", "option")
             state_handler(user, "isBusy", False)
-    except YearNotFoundError:
-        bot.send_message(message.chat.id, "⚠️ Data currently unavailable.")
+    except YearNotFoundException:
+        bot.send_message(
+            message.chat.id, "⚠️ Data for the next academic year is not yet available on NUSMods. Please try again in a few days :)")
         state_handler(user, "isBusy", False)
+        terminate_operation(message)
 
 
 # Callback handler for URL info function
@@ -1161,35 +723,30 @@ def handle_url_sent(message):
         try:
             output = extractData(cleanTimetableLink(
                 message.text), message.text)
-            if output == 'data_not_found':
+            for i in output:
+                result.append(i[0])
+            state_handler(user, "semIndex", int(detectSem(message.text)))
+            try:
+                result = parse_url(result)
+                count3 = -1
+                for module in result:
+                    count3 += 1
+                    if len(module.split(' ')) > 6:
+                        result[count3] = " ".join(
+                            (module.split(' '))[0:4]) + '... ' + (module.split(' '))[-1]
+                if len(result) > 8:
+                    bot.send_message(
+                        message.chat.id, "⚠️ Too many modules! Showing only the first 8 modules.")
+                state_handler(user, "result", result)
+                bot.send_message(
+                    message.chat.id, "📚 Here are your modules for the semester! 📚\n\nSelect a module you'd like to know more about:", reply_markup=gen_markup(result))
+                state_handler(user, "getModuleInfo", 2)
+                state_handler(user, "isBusy", False)
+            except YearNotFoundException:
                 bot.send_message(
                     message.chat.id, "⚠️ Data currently unavailable.")
                 state_handler(user, "isBusy", False)
-            else:
-                for i in output:
-                    result.append(i[0])
-                state_handler(user, "semIndex", int(detectSem(message.text)))
-                try:
-                    result = iterate_modules_for_url(result)
-                    count3 = -1
-                    for module in result:
-                        count3 += 1
-                        if len(module.split(' ')) > 6:
-                            result[count3] = " ".join(
-                                (module.split(' '))[0:4]) + '... ' + (module.split(' '))[-1]
-                    if len(result) > 8:
-                        bot.send_message(
-                            message.chat.id, "⚠️ Too many modules! Showing only the first 8 modules.")
-                    state_handler(user, "result", result)
-                    bot.send_message(
-                        message.chat.id, "📚 Here are your modules for the semester! 📚\n\nSelect a module you'd like to know more about:", reply_markup=gen_markup(result))
-                    state_handler(user, "getModuleInfo", 2)
-                    state_handler(user, "isBusy", False)
-                except YearNotFoundError:
-                    bot.send_message(
-                        message.chat.id, "⚠️ Data currently unavailable.")
-                    state_handler(user, "isBusy", False)
-        except SemesterNotFoundError:
+        except SemesterNotFoundException:
             bot.send_message(
                 message.chat.id, "⚠️ I've detected some modules which are not ongoing during the specified semester. Please send your NUSMods timetable link again.\nPress ❌ Cancel to exit.")
             state_handler(user, "isBusy", False)
@@ -1218,10 +775,12 @@ def handle_image_sent(message):
                 if not result:
                     bot.send_message(
                         message.chat.id, '⚠️ A server error ocurred.\nPlease wait before sending me another photo.\nAlternatively, you may press ❌ Cancel to exit.')
+                    print("API might be down, check API status.")
                     state_handler(user, "isBusy", False)
                 elif result == 'error':
                     bot.send_message(
                         message.chat.id, '⚠️ Woops! Please send me a timetable from NUSMods only.')
+                    print('Wrong image file sent.')
                     state_handler(user, "isBusy", False)
                 else:
                     if len(result) != 0:
@@ -1243,7 +802,7 @@ def handle_image_sent(message):
                         bot.send_message(
                             message.chat.id, '⚠️ It seems you do not have any modules.')
                         state_handler(user, "isBusy", False)
-            except YearNotFoundError:
+            except YearNotFoundException:
                 bot.send_message(
                     message.chat.id, "⚠️ Data currently unavailable.")
                 state_handler(user, "isBusy", False)
@@ -1272,6 +831,7 @@ def callback_query(call):
         if str(user) in user_state:
             del user_state[str(user)]
     else:
+        print(isolate_module_code_from_callback(choice))
         if isolate_module_code_from_callback(choice) != False:
             isolate_module = isolate_module_code_from_callback(choice)
             state_handler(user, "isoModule", isolate_module)
@@ -1465,6 +1025,16 @@ def answerReminderCallback(call):
 scheduler.start()
 scheduler.print_jobs()
 
+# For debugging reminders
+#sample = "https://nusmods.com/timetable/sem-1/share?ACC1701X=LEC:X1,TUT:X14&CFG1002=LEC:09&CS1101S=TUT:09A,REC:02A,LEC:1&CS1231S=TUT:19,LEC:1&MA1521=LEC:1,TUT:3&MA2001=LEC:2,TUT:17https://nusmods.com/timetable/sem-1/share?ACC1701X=LEC:X1,TUT:X14&CFG1002=LEC:09&CS1101S=TUT:09A,REC:02A,LEC:1&CS1231S=TUT:19,LEC:1&MA1521=LEC:1,TUT:3&MA2001=LEC:2,TUT:17"
+
+#output = extractData(cleanTimetableLink(sample), sample)
+# print(output)
+# unsorted_reminders = generate_reminders(output, sample, academic_year)
+# sorted_reminders = sorted(unsorted_reminders, key=lambda t: (t[1], t[2]))
+# for i in unsorted_reminders:
+#     print(i)
+
 # General callback handler to handle inactive button activations
 
 
@@ -1474,11 +1044,21 @@ def handle_unknown_callbacks(call):
     bot.send_message(call.message.chat.id, "⚠️ Button has expired.")
 
 
+bot.polling(True)
+
+
 @server.route('/' + TOKEN, methods=['POST'])
 def getMessage():
     json_string = request.get_data().decode('utf-8')
     update = telebot.types.Update.de_json(json_string)
     bot.process_new_updates([update])
+    return "!", 200
+
+
+@server.route("/")
+def webhook():
+    bot.remove_webhook()
+    bot.set_webhook(url='https:/herokuapp.com/' + TOKEN)
     return "!", 200
 
 
